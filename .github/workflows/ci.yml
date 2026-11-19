@@ -15,7 +15,8 @@ jobs:
       - run: sh mvnw -B verify dependency:tree -Dscope=runtime -DoutputFile=target/runtime-tree.txt
       - run: python3 scripts/auditar_dependencias.py target/runtime-tree.txt --ci
       - run: docker compose config --quiet
-      - run: docker compose build api
+      - name: Verificar a imagem com um processo seletivo por HTTP
+        run: python3 scripts/demonstrar.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

@@ -2,6 +2,18 @@
 
 API REST em Java 21 e Spring Boot 3.5 para publicar vagas, receber currículos em PDF e acompanhar candidaturas. PostgreSQL 16 mantém o funil e seu histórico. Migrações Flyway criam as tabelas e o Hibernate valida o schema ao iniciar.
 
+## Demonstração automática
+
+Na raiz do projeto, com Python 3.10+ e Docker Compose com suporte a `up --wait`, execute:
+
+```sh
+python scripts/demonstrar.py
+```
+
+Em sistemas que disponibilizam o interpretador como `python3`, use `python3 scripts/demonstrar.py`. A primeira execução baixa as imagens e compila a API. O roteiro cria uma empresa e um recrutador, publica uma vaga, inscreve um candidato com um PDF fictício e avança a candidatura para entrevista. Pelo HTTP, confere também a recusa da inscrição duplicada, o conteúdo do PDF baixado e o histórico das etapas.
+
+A demonstração usa credenciais temporárias, volumes próprios e uma porta local livre. Ao terminar, remove os recursos desse projeto temporário e informa o resultado no terminal. O mesmo roteiro roda no GitHub Actions. Para explorar a API interativamente com dados persistentes, siga a seção abaixo.
+
 ## Executar localmente
 
 O Compose deste repositório foi preparado para desenvolvimento em loopback. Para configurar TLS, a conta restrita do banco e os segredos de produção, consulte o [relatório de segurança](SEGURANCA.md).
@@ -34,6 +46,7 @@ A busca pública aceita modalidade, nível, tecnologia e localização. A págin
 | --- | --- |
 | JWT_SECRET | Chave Base64 de pelo menos 32 bytes. Se omitida, a API gera uma chave temporária e os access tokens expiram ao reiniciar. |
 | POSTGRES_PASSWORD | Senha do banco. O Compose fornece um valor local padrão. |
+| API_PORT | Porta de loopback publicada pelo Compose. O padrão é 8080. A demonstração usa 0 para o Docker escolher uma porta livre. |
 | DATABASE_URL / POSTGRES_USER | Conexão JDBC e usuário ao executar fora do Compose. |
 | UPLOADS_DIR | Diretório de PDFs, por padrão ./uploads. |
 | ADMIN_EMAIL / ADMIN_PASSWORD | Criação opcional do primeiro administrador. |
