@@ -1,0 +1,57 @@
+# Revisão de segurança da Plataforma de Processo Seletivo
+
+**19 de novembro de 2026.** Escopo: código-fonte, configuração, dependências Maven de execução e testes locais da API com Java 21 e PostgreSQL 16. O ambiente publicado, o provedor de identidade do operador e a infraestrutura de backup ficaram fora da verificação.
+
+## Achados e correções
+
+| Área | Achado | Resultado e limite |
+| --- | --- | --- |
+| 1. Autenticação | BCrypt existente e tokens rotativos. Havia geração de uma conta em memória desnecessária pelo Spring. | Desabilitada a autoconfiguração dessa conta. Senhas novas usam Argon2id com 19 MiB, duas iterações, paralelismo 1 e salt individual. Um login bem-sucedido migra o hash BCrypt existente. Access token dura 15 minutos. Refresh token tem 256 bits aleatórios, hash no banco, rotação de uso único e revogação na desativação. |
+| 2. Banco e consultas | A conta que inicializa o PostgreSQL no Compose tem privilégios de administração. | Compose destinado ao desenvolvimento. Em produção, Flyway fica separado da API. A inicialização verifica privilégios, propriedade da tabela de usuários, permissão de criar no schema e TLS da conexão. Revisadas as consultas JPA e SQL com parâmetros vinculados, critérios tipados e ordenação por lista permitida. As permissões efetivas de um banco publicado exigem conferência no provedor. |
+| 3. Transporte | O serviço de desenvolvimento aceita HTTP. | Execução local vinculada a loopback. Perfil prod configura conector HTTPS na porta 8443 com TLS 1.2/1.3 e HSTS. O banco usa verificação de certificado e hostname. Certificados e portas do domínio público dependem da implantação. |
+| 4. Formulários | Alguns campos aceitavam entradas maiores que o necessário. | Validação no servidor para dados de cadastro, CNPJ, login, enums e paginação. Descrição de vaga limitada a 16.000 caracteres e tecnologias a 64 itens por vaga. |
+| 5 e 10. XSS e cabeçalhos | Faltava uma política explícita para conteúdo web. | CSP restringe scripts à mesma origem, bloqueia objetos e enquadramento externo. Estilos em linha continuam permitidos para a interface local. Respostas usam nosniff e política de referência no-referrer. Textos retornam em JSON. Um futuro front-end deve inserir esses valores como texto e codificar saídas conforme o contexto. |
+| 6 e 9. Abuso | Faltava limitação de frequência. | Por par TCP e instância, 180 requisições/minuto no total, das quais até 20 para autenticação. Excesso recebe 429 e Retry-After. O mapa tem tamanho máximo. O monitor de logs detecta séries de 401, 403 e 429 e emite alertas JSON. Ainda requer execução contínua e destino de notificações no ambiente publicado. |
+| 7. Administração | Autorização concentrada nos métodos da aplicação. | Acrescentada verificação de papel no filtro para gestão de usuários e de empresas. O perfil do candidato e as rotas aninhadas de recrutadores preservam suas regras de acesso. |
+| 8. Segredos | Defaults de desenvolvimento inadequados para um serviço publicado. | Perfil prod requer configuração externa de banco, JWT e TLS. Rejeita chave JWT curta, senhas de banco padrão e debug/trace. A chave da API e certificados devem ser injetados pelo ambiente. |
+| 11 e 12. Sessão, CSRF e CORS | A API autentica por Bearer no cabeçalho e recebe refresh token explícito no corpo. | API stateless, cache de requisição e logout de formulário desabilitados. O teste verifica ausência de Set-Cookie. Perfil prod configura Secure, HttpOnly e SameSite=Strict como defesa adicional. O filtro rejeita origens CORS diferentes e pedidos marcados cross-site. O token anti-CSRF do Spring permanece desabilitado para esse modelo. Uma mudança para autenticação por cookie exige redesenhar o controle CSRF. |
+| 13. Redefinição | Não existe rota de recuperação de senha nem emissão de links. | Não há link ativo para expirar. Em uma futura implementação, exigir validade curta, hash do token no banco e consumo único. |
+| 14. Currículos | Entrada de binários por multipart. | Conferidos limite de 5 MiB, MIME PDF, assinatura %PDF, nome UUID e acesso autenticado. O download usa Content-Disposition attachment. A assinatura identifica o formato; o conteúdo interno de um PDF ainda pode ser malicioso. Não há antivírus integrado. |
+| 15. Debug | Documentação interativa disponível no desenvolvimento. | Perfil prod desativa Swagger, OpenAPI, debug, trace, log de parâmetros SQL e detalhes de exceções na resposta. |
+| 16. Dependências | A primeira consulta após atualizar o parent ainda encontrou avisos em sete coordenadas. | Atualizados Boot, Tomcat, Jackson, PostgreSQL JDBC, Log4j, Commons Lang, springdoc e JJWT. Consulta final ao OSV cobriu 86 coordenadas de runtime e encontrou dois avisos em Spring Web MVC. Dependabot configurado para atualizações semanais quando o projeto estiver hospedado no GitHub. As imagens de contêiner e as ferramentas de build não entram nessa contagem. |
+| 17–19. Arquivos e chaves | A pasta do projeto não pertence a um repositório Git. | Inspeção local por nomes de arquivos sensíveis e assinaturas comuns de chaves privadas, AWS, GitHub e API não apontou credencial comprometida nos fontes. Ampliadas exclusões para certificados, chaves, logs e variantes de .env. Testados pedidos anônimos a /.env e /.git/config. Sem histórico Git disponível para varrer. Nenhuma chave externa foi revogada ou substituída. |
+| 20–21. Verificação | Cobertura anterior focada no fluxo funcional. | Acrescentados testes de autorização administrativa, origem, cabeçalhos, sessão, limites de frequência, compatibilidade de hashes e validações do perfil prod. Os testes do perfil usam JDBC simulado; o fluxo de candidatura usa PostgreSQL real. |
+
+## Dois avisos abertos
+
+O ciclo Maven verify passou com 11 testes, zero falhas e zero testes ignorados. A sintaxe do Compose passou em docker compose config --quiet. O teste de HSTS usa uma requisição marcada como segura em MockMvc. A negociação TLS pelo domínio público, a cadeia de certificados e a entrega de alertas ao operador ainda dependem de validação na implantação.
+
+A árvore Maven contém Spring Web MVC 6.2.19. Inspecionamos os endpoints e não encontramos streaming SSE de fragmentos de view nem uso de XsltView, pré-condições descritas pelo fornecedor. Esta é uma avaliação do código atual. Manter os avisos abertos e reavaliá-los antes de adicionar renderização de views. Para aplicar a correção da linha 6.2 preservando Spring Boot 3, o fornecedor lista 6.2.20 via suporte empresarial. Uma migração para a linha pública corrigida muda a stack exigida pelo projeto. [Aviso Spring sobre SSE](https://spring.io/security/cve-2026-47890/) · [Aviso Spring sobre XsltView](https://spring.io/security/cve-2026-47884/)
+
+## Implantação do perfil de produção
+
+1. Use uma conta de migração separada para aplicar os scripts em src/main/resources/db/migration. Crie uma conta de execução sem superusuário, criação de roles/bancos, propriedade de tabelas, criação no schema ou privilégios de migração. Conceda CONNECT no banco, USAGE no schema e apenas leitura/escrita nas tabelas necessárias. Não conceda escrita no histórico do Flyway. Mantenha o PostgreSQL em rede privada, com TLS e backups cujo restauro tenha sido testado.
+2. Configure SPRING_PROFILES_ACTIVE=prod, DATABASE_URL, POSTGRES_USER, POSTGRES_PASSWORD e JWT_SECRET. Gere a chave JWT com pelo menos 32 bytes aleatórios e codifique em Base64. A URL JDBC deve identificar o hostname do certificado do banco; configure a CA confiável do PostgreSQL e use sslmode=verify-full. Evite incluir senhas na URL.
+3. Monte o keystore PKCS12 do domínio fora da pasta de fontes. Configure TLS_KEYSTORE com sua localização e TLS_KEYSTORE_PASSWORD via gerenciador de segredos. Se necessário, provisione o primeiro administrador com ADMIN_EMAIL e ADMIN_PASSWORD e retire essas credenciais de bootstrap após o uso.
+4. Execute o JAR com essas variáveis e exponha apenas a porta HTTPS. Restrinja volumes de currículos e backups ao serviço e ao operador autorizado. O Compose padrão publica a API somente em localhost para desenvolvimento.
+5. Atrás de proxy ou com várias réplicas, aplique também limites e tamanho máximo de corpo no gateway. O limitador da API usa o endereço TCP observado e ignora cabeçalhos de IP encaminhados. Clientes atrás do mesmo proxy compartilham a cota; réplicas mantêm contagens independentes.
+
+## Monitoramento e repetição das verificações
+
+Para acompanhar os eventos ao vivo em um ambiente Compose, rode:
+
+```sh
+docker compose logs --follow --tail=0 api | python scripts/monitorar_acesso.py
+```
+
+O monitor agrega eventos recebidos em 60 segundos e emite um alerta a partir de dez respostas 401, dez respostas 403 ou cinco respostas 429, por categoria. Inclui um correlation ID para investigação. O fluxo foi conferido com dez eventos de exemplo. Direcione a saída ao coletor de logs da implantação para operar alertas fora do terminal.
+
+Para verificar os testes e os avisos de bibliotecas Maven:
+
+```sh
+./mvnw verify
+./mvnw dependency:tree -Dscope=runtime -DoutputFile=target/runtime-tree.txt
+python scripts/auditar_dependencias.py target/runtime-tree.txt
+```
+
+O script requer Python 3.10+ e consulta o OSV enviando coordenadas de pacote e versão. Retorna código 1 quando há avisos. Uma futura descoberta de segredo no histórico exige revogação no emissor, atualização do gerenciador de segredos e verificação de uso indevido. Para comprometimento da chave JWT, a resposta também inclui trocar a chave em todas as instâncias e revogar os refresh tokens ativos.

@@ -1,0 +1,10 @@
+target
+uploads
+.env
+.git
+.env.*
+**/*.key
+**/*.pem
+**/*.p12
+**/*.jks
+**/*.log

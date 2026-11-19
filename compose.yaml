@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: selecao
+      POSTGRES_USER: selecao
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-selecao}
+    volumes:
+      - dados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U selecao -d selecao"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      DATABASE_URL: jdbc:postgresql://db:5432/selecao
+      SERVER_ADDRESS: 0.0.0.0
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-selecao}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+    volumes:
+      - curriculos:/app/uploads
+volumes:
+  dados:
+  curriculos:

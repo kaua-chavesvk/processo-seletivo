@@ -1,0 +1,11 @@
+target/
+uploads/
+.env
+.idea/
+*.iml
+.env.*
+*.key
+*.pem
+*.p12
+*.jks
+*.log
