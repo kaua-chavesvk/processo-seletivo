@@ -1,31 +1,41 @@
 package br.dev.selecao.auth;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.concurrent.TimeUnit;
 
-/** Janela fixa global por instância, indexada pelo endereço do par TCP. */
 final class LimiteRequisicoes {
-    private static final long MINUTO = TimeUnit.MINUTES.toNanos(1);
-    private static final int MAX_ENDERECOS = 16_384;
-    private final Map<String, Contagem> clientes = new HashMap<>();
-    private long inicio = System.nanoTime();
+  private static final long MINUTO = TimeUnit.MINUTES.toNanos(1);
+  private static final int CAPACIDADE = 16_384;
+  private final LinkedHashMap<String, Baldes> clientes = new LinkedHashMap<>(16, .75f, true);
+  private final Baldes compartilhado = new Baldes();
 
-    synchronized boolean permitir(String endereco, boolean autenticacao, long agora) {
-        if (agora - inicio >= MINUTO) {
-            clientes.clear();
-            inicio = agora;
-        }
-        if (clientes.size() >= MAX_ENDERECOS && !clientes.containsKey(endereco)) return false;
-        var uso = clientes.computeIfAbsent(endereco, chave -> new Contagem());
-        if (uso.total >= 180 || (autenticacao && uso.autenticacao >= 20)) return false;
-        uso.total++;
-        if (autenticacao) uso.autenticacao++;
-        return true;
+  synchronized boolean permitir(String endereco, boolean autenticacao, long agora) {
+    var uso = clientes.get(endereco);
+    if (uso == null) {
+      if (clientes.size() >= CAPACIDADE
+          && agora - clientes.firstEntry().getValue().ultimo >= MINUTO) clientes.pollFirstEntry();
+      if (clientes.size() < CAPACIDADE) {
+        uso = new Baldes();
+        clientes.put(endereco, uso);
+      } else uso = compartilhado;
     }
+    return uso.consumir(autenticacao, agora);
+  }
 
-    private static final class Contagem {
-        int autenticacao;
-        int total;
+  private static final class Baldes {
+    long ultimo;
+    double geral = 180;
+    double auth = 20;
+
+    boolean consumir(boolean autenticacao, long agora) {
+      double minutos = Math.max(0, agora - ultimo) / (double) MINUTO;
+      ultimo = agora;
+      geral = Math.min(180, geral + minutos * 180);
+      auth = Math.min(20, auth + minutos * 20);
+      if (geral < 1 || (autenticacao && auth < 1)) return false;
+      geral--;
+      if (autenticacao) auth--;
+      return true;
     }
+  }
 }

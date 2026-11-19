@@ -55,3 +55,11 @@ python scripts/auditar_dependencias.py target/runtime-tree.txt
 ```
 
 O script requer Python 3.10+ e consulta o OSV enviando coordenadas de pacote e versão. Retorna código 1 quando há avisos. Uma futura descoberta de segredo no histórico exige revogação no emissor, atualização do gerenciador de segredos e verificação de uso indevido. Para comprometimento da chave JWT, a resposta também inclui trocar a chave em todas as instâncias e revogar os refresh tokens ativos.
+
+## Comportamento do logout e dos limites
+
+O logout consome o refresh token apresentado. Um access token já emitido continua válido até sua expiração (padrão de 15 minutos). A desativação da conta também impede o uso dos seus access tokens nas próximas requisições.
+
+O limitador usa dois token buckets por endereço TCP com reposição contínua. As capacidades iniciais são 180 chamadas no total e 20 de autenticação. Com 16.384 endereços em memória, novos endereços compartilham uma reserva limitada enquanto não houver entrada ociosa para reaproveitar. Múltiplas réplicas continuam exigindo limitação no gateway.
+
+A CI consulta o OSV e falha para avisos novos. As duas exceções documentadas acima se aplicam somente às coordenadas exatas de spring-webmvc 6.2.19. A execução manual sem `--ci` continua sinalizando todos os avisos.

@@ -7,10 +7,12 @@ import java.util.*;
 @Entity
 @Table(name = "refresh_token")
 public class Refresh {
-    @Id @GeneratedValue(strategy = GenerationType.UUID)
-    public UUID id;
-    public UUID usuarioId;
-    public String hashToken;
-    public Instant expiraEm;
-    public boolean revogado;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  UUID id;
+
+  UUID usuarioId;
+  String hashToken;
+  Instant expiraEm;
+  boolean revogado;
 }

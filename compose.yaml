@@ -1,6 +1,7 @@
 services:
   db:
-    image: postgres:16
+    restart: unless-stopped
+    image: postgres:16@sha256:3950ad7c3148ca2175ef1b6c36c9efbf78957ae8fbe8b3a5d7c35af50500382f
     environment:
       POSTGRES_DB: selecao
       POSTGRES_USER: selecao
@@ -14,6 +15,13 @@ services:
       retries: 20
   api:
     build: .
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 90s
+      retries: 3
     depends_on:
       db:
         condition: service_healthy

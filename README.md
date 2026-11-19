@@ -49,3 +49,19 @@ Os testes exercitam a matriz de transições, os dígitos verificadores do CNPJ,
 ## Organização
 
 Os pacotes usuario, auth, empresa, vaga, candidatura e curriculo agrupam código por domínio. O pacote comum reúne paginação, identificação do ator, persistência compartilhada e tratamento de erros. A classe Funil valida as transições sem dependência do Spring. O acesso concorrente à inscrição e à alteração de etapa utiliza bloqueios transacionais; a etapa e seu histórico são gravados juntos. A interface ArmazenamentoCurriculo permite substituir o diretório local por outro provedor.
+
+## Regras de edição e operação
+
+O recrutador edita os campos da vaga enquanto ela está em rascunho. Publicar congela o conteúdo e a vaga ainda pode ser encerrada. No funil, o recrutador pode avançar uma etapa ou reprovar o candidato. A desistência e a atualização do próprio perfil são operações do candidato. O endpoint de empresas retorna uma página com os registros em `content` e aceita `sort=nome,asc` ou `sort=criada_em,desc`.
+
+O Compose utiliza `GET /actuator/health` para verificar a disponibilidade. O endpoint retorna o status agregado. O exemplo de ambiente está em `.env.example`.
+
+### Migrar o banco de produção
+
+No ambiente com o Flyway CLI e suporte a PostgreSQL, injete `FLYWAY_URL`, `FLYWAY_USER` e `FLYWAY_PASSWORD` da conta de migração. Configure a URL JDBC com `sslmode=verify-full` e `sslrootcert` apontando para a CA montada. Na raiz deste projeto, execute antes da implantação:
+
+```sh
+flyway -locations=filesystem:src/main/resources/db/migration migrate
+```
+
+O Flyway valida as migrações já aplicadas antes de aplicar as novas. A aplicação de produção usa a conta de execução e recebe o caminho da CA em `POSTGRES_SSL_ROOT_CERT`. Essa conta precisa de DELETE em refresh_token para a limpeza diária às 03h17 UTC.

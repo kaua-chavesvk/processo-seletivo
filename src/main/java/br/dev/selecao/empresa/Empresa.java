@@ -7,10 +7,12 @@ import java.util.*;
 @Entity
 @Table(name = "empresa")
 public class Empresa {
-    @Id @GeneratedValue(strategy = GenerationType.UUID)
-    public UUID id;
-    public String nome;
-    public String cnpj;
-    public String site;
-    public Instant criadaEm;
+  @Id
+  @GeneratedValue(strategy = GenerationType.UUID)
+  UUID id;
+
+  String nome;
+  String cnpj;
+  String site;
+  Instant criadaEm;
 }

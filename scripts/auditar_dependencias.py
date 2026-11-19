@@ -21,14 +21,18 @@ def main(arquivo):
                          headers={"Content-Type": "application/json"})
     with urlopen(requisicao, timeout=30) as resposta:
         resultados = json.load(resposta)["results"]
+    conhecidos = {("org.springframework:spring-webmvc", "6.2.19", aviso) for aviso in
+                  ("GHSA-j9f9-w8pj-32f8", "GHSA-pc63-qcmh-9cmg")} if "--ci" in sys.argv else set()
+    novos = 0
     encontrados = 0
     for consulta, resultado in zip(consultas, resultados, strict=True):
         avisos = resultado.get("vulns", [])
         if avisos:
             encontrados += len(avisos)
+            novos += sum((consulta["package"]["name"], consulta["version"], a["id"]) not in conhecidos for a in avisos)
             print(consulta["package"]["name"], consulta["version"], ", ".join(a["id"] for a in avisos))
     print(f"{len(consultas)} coordenadas consultadas; {encontrados} ocorrências.")
-    return int(encontrados > 0)
+    return int(novos > 0)
 
 
 if __name__ == "__main__":

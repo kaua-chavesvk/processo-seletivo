@@ -9,3 +9,5 @@ uploads/
 *.p12
 *.jks
 *.log
+
+!.env.example
