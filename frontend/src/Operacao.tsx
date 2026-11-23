@@ -139,7 +139,7 @@ export function Operacao({
           <>
             <label>
               Empresa
-              <select name="empresaId" required>
+              <select name="empresaId" aria-label="Empresa" required>
                 <option value="">Selecione a empresa</option>
                 {empresas.data?.map((e) => (
                   <option key={e.id} value={e.id}>
@@ -221,7 +221,7 @@ export function Operacao({
         {aba === "publicar" && (
           <label>
             Vaga em rascunho
-            <select name="vagaId" required>
+            <select name="vagaId" aria-label="Vaga em rascunho" required>
               <option value="">Selecione a vaga</option>
               {rascunhos.map((v) => (
                 <option key={v.id} value={v.id}>
