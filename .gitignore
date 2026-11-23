@@ -11,3 +11,9 @@ uploads/
 *.log
 
 !.env.example
+
+**/node_modules/
+**/dist/
+**/.vercel/
+**/test-results/
+**/playwright-report/

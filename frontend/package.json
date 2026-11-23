@@ -1,0 +1,28 @@
+{
+  "name": "trilha-selecao",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "playwright test",
+    "build": "tsc --noEmit && vite build",
+    "dev": "vite",
+    "build:demo": "tsc --noEmit && vite build --mode demonstracao",
+    "dev:demo": "vite --mode demonstracao"
+  },
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@fontsource-variable/dm-sans": "5.3.0",
+    "@tanstack/react-query": "5.108.4",
+    "lucide-react": "1.78.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "prettier": "3.10.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.8"
+  }
+}

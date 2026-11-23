@@ -8,3 +8,9 @@ uploads
 **/*.p12
 **/*.jks
 **/*.log
+
+**/node_modules/
+**/dist/
+**/.vercel/
+**/test-results/
+**/playwright-report/

@@ -1,4 +1,4 @@
-name: Verificar API
+name: Verificar plataforma
 on: [push, pull_request]
 permissions:
   contents: read
@@ -14,8 +14,18 @@ jobs:
           cache: maven
       - run: sh mvnw -B verify dependency:tree -Dscope=runtime -DoutputFile=target/runtime-tree.txt
       - run: python3 scripts/auditar_dependencias.py target/runtime-tree.txt --ci
+      - name: Compilar e testar a interface
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+          npm audit --audit-level=high
+          npx playwright install --with-deps chromium
+          npm test -- demo.spec.ts
       - run: docker compose config --quiet
       - name: Verificar a imagem com um processo seletivo por HTTP
+        env:
+          TESTAR_INTERFACE: "true"
         run: python3 scripts/demonstrar.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
