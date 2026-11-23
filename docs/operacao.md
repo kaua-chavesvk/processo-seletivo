@@ -79,3 +79,13 @@ flyway -locations=filesystem:src/main/resources/db/migration migrate
 ```
 
 O Flyway valida as migrações já aplicadas antes de aplicar as novas. A aplicação de produção usa a conta de execução e recebe o caminho da CA em `POSTGRES_SSL_ROOT_CERT`. Essa conta precisa de DELETE em refresh_token para a limpeza diária às 03h17 UTC.
+
+## Currículos em bucket privado
+
+O modo padrão do Compose usa o volume local. Para usar S3 ou R2, configure `CURRICULOS_MODO=s3`, `CURRICULOS_BUCKET` e `AWS_REGION`. Em R2, use a região `auto` e o endpoint HTTPS S3 da sua conta em `CURRICULOS_ENDPOINT`. Para serviços que exigem o nome do bucket no caminho, defina `CURRICULOS_PATH_STYLE=true`. Use a cadeia de credenciais do SDK, como uma role de execução ou credenciais injetadas no servidor. Mantenha o acesso público do bucket bloqueado e limite a identidade da aplicação a GetObject, PutObject e DeleteObject no prefixo `curriculos/`.
+
+O servidor valida e limita o PDF antes do upload, guarda uma chave UUID no PostgreSQL e entrega o conteúdo após conferir o perfil e a empresa. Ao migrar uma instalação com arquivos existentes, suspenda novas inscrições durante a cópia, envie os PDFs do volume para `curriculos/<nome-completo-do-arquivo>` preservando os nomes completos, compare a quantidade e os checksums e só então altere o modo. Preserve o volume original até verificar os downloads no novo modo.
+
+## Publicar a interface de demonstração
+
+O diretório do projeto Vercel é `frontend/`. O arquivo `vercel.json` executa `npm run build:demo` e publica `dist/`. Para uma nova publicação manual no projeto vinculado, execute `vercel deploy --prod` a partir desse diretório. A demonstração usa dados fictícios na memória da aba. O Docker executa o build integrado e serve o React e a API Spring no mesmo endereço.

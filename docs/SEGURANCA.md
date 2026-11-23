@@ -24,7 +24,7 @@
 
 ## Dois avisos abertos
 
-Na revisão de 19 de novembro, o ciclo Maven verify passou com 11 testes, zero falhas e zero testes ignorados. A sintaxe do Compose passou em docker compose config --quiet. O teste de HSTS usa uma requisição marcada como segura em MockMvc. A negociação TLS pelo domínio público, a cadeia de certificados e a entrega de alertas ao operador ainda dependem de validação na implantação.
+Na revisão de 19 de novembro, o ciclo Maven verify passou com 11 testes, zero falhas e zero testes ignorados. Essa contagem pertence à execução histórica. A suíte cresceu desde então. O resumo Surefire do passo Maven em cada [execução da CI](https://github.com/kaua-chavesvk/processo-seletivo/actions/workflows/ci.yml) traz a contagem do commit testado. A sintaxe do Compose passou em docker compose config --quiet. O teste de HSTS usa uma requisição marcada como segura em MockMvc. A negociação TLS pelo domínio público, a cadeia de certificados e a entrega de alertas ao operador ainda dependem de validação na implantação.
 
 A árvore Maven contém Spring Web MVC 6.2.19. Inspecionamos os endpoints e não encontramos streaming SSE de fragmentos de view nem uso de XsltView, pré-condições descritas pelo fornecedor. Esta é uma avaliação do código atual. Manter os avisos abertos e reavaliá-los antes de adicionar renderização de views. Para aplicar a correção da linha 6.2 preservando Spring Boot 3, o fornecedor lista 6.2.20 via suporte empresarial. Uma migração para a linha pública corrigida muda a stack exigida pelo projeto. [Aviso Spring sobre SSE](https://spring.io/security/cve-2026-47890/) · [Aviso Spring sobre XsltView](https://spring.io/security/cve-2026-47884/)
 

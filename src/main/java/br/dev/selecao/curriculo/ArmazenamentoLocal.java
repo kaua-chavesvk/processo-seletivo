@@ -12,6 +12,10 @@ import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(
+    name = "app.curriculos.modo",
+    havingValue = "local",
+    matchIfMissing = true)
 public class ArmazenamentoLocal implements ArmazenamentoCurriculo {
   private final Path raiz;
 
@@ -24,39 +28,19 @@ public class ArmazenamentoLocal implements ArmazenamentoCurriculo {
   }
 
   public String salvar(MultipartFile arquivo) {
-    long limite = tamanho.toBytes();
-    if (!"application/pdf".equalsIgnoreCase(arquivo.getContentType()) || arquivo.getSize() > limite)
-      throw Falha.invalida("Envie um PDF de até " + limiteFormatado(limite));
-    String chave = UUID.randomUUID() + ".pdf";
-    try (var entrada = arquivo.getInputStream()) {
-      byte[] prefixo = entrada.readNBytes(4);
-      if (!Arrays.equals(prefixo, "%PDF".getBytes(java.nio.charset.StandardCharsets.US_ASCII)))
-        throw Falha.invalida("Conteúdo PDF inválido");
-      var arquivoNovo = Files.newOutputStream(caminho(chave), StandardOpenOption.CREATE_NEW);
-      try (var saida = arquivoNovo) {
-        saida.write(prefixo);
-        long total = prefixo.length;
-        byte[] buffer = new byte[8192];
-        int lidos;
-        while ((lidos = entrada.read(buffer)) != -1) {
-          total += lidos;
-          if (total > limite) throw Falha.invalida("PDF excede o limite de tamanho");
-          saida.write(buffer, 0, lidos);
-        }
+    String chave = DocumentoPdf.novaChave();
+    try {
+      var destino = Files.newOutputStream(caminho(chave), StandardOpenOption.CREATE_NEW);
+      try (destino) {
+        DocumentoPdf.copiar(arquivo, destino, tamanho.toBytes());
       } catch (IOException | RuntimeException ex) {
         remover(chave);
         throw ex;
       }
       return chave;
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
+    } catch (IOException ex) {
+      throw new UncheckedIOException(ex);
     }
-  }
-
-  private static String limiteFormatado(long bytes) {
-    if (bytes % (1024 * 1024) == 0) return bytes / (1024 * 1024) + " MB";
-    if (bytes % 1024 == 0) return bytes / 1024 + " KB";
-    return bytes + " bytes";
   }
 
   public Resource carregar(String chave) {
@@ -74,8 +58,6 @@ public class ArmazenamentoLocal implements ArmazenamentoCurriculo {
   }
 
   private Path caminho(String chave) {
-    if (!chave.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.pdf"))
-      throw Falha.ausente();
-    return raiz.resolve(chave);
+    return raiz.resolve(DocumentoPdf.validarChave(chave));
   }
 }
