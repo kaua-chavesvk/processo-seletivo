@@ -65,3 +65,10 @@ O limitador usa dois token buckets por endereço TCP com reposição contínua. 
 A CI consulta o OSV e falha para avisos novos. As duas exceções documentadas acima se aplicam somente às coordenadas exatas de spring-webmvc 6.2.19. A execução manual sem `--ci` continua sinalizando todos os avisos.
 
 As exceções de versão e aviso ficam em [scripts/excecoes-auditoria.json](../scripts/excecoes-auditoria.json). O responsável deve reavaliá-las antes de `expira_em`. À meia-noite UTC dessa data a auditoria falha, inclusive se o aviso tiver desaparecido do OSV, até que a lista seja revisada.
+
+## Revisão da interface e do armazenamento em 23 de novembro
+
+- O painel do recrutador confere a empresa da vaga e a área do candidato busca apenas registros do usuário autenticado. Os testes verificam essas restrições e o fluxo entre dois navegadores com sessões independentes.
+- A publicação na Vercel usa dados fictícios em memória. A política de conteúdo restringe recursos à própria origem. As credenciais da aplicação integrada ficam na memória da aba. Nenhuma credencial do banco ou do bucket integra a configuração pública do Vite.
+- No histórico Git disponível até o commit `8d5c6c0`, a busca por assinaturas de chaves privadas e tokens de AWS, GitHub, OpenAI e Vercel examinou 208 blobs de texto e retornou zero ocorrências. O resultado cobre os formatos pesquisados.
+- A integração S3 usa o cliente HTTP da JDK. A primeira resolução do SDK também incluía o transporte Apache opcional. O OSV identificou três avisos nas dependências desse transporte, que foi excluído do runtime. As exceções já documentadas de Spring MVC continuam com a mesma expiração.
