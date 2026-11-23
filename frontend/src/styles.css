@@ -208,6 +208,15 @@ nav a:hover {
   margin: 20px 0;
   color: #d8c8f6;
 }
+.demo-note a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 6px;
+  color: inherit;
+  font-size: 12px;
+  text-underline-offset: 3px;
+}
 .identity {
   border-top: 1px solid #433f51;
   padding: 16px 2px;

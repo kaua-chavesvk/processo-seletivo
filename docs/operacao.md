@@ -94,11 +94,11 @@ O servidor valida e limita o PDF antes do upload, guarda uma chave UUID no Postg
 
 ## Publicar a interface de demonstração
 
-O diretório do projeto Vercel é `frontend/`. O arquivo `vercel.json` executa `npm run build:demo` e publica `dist/`. Para uma nova publicação manual no projeto vinculado, execute `vercel deploy --prod` a partir desse diretório. A demonstração usa dados fictícios na memória da aba. O Docker executa o build integrado e serve o React e a API Spring no mesmo endereço.
+O projeto Vercel `trilha-processo-seletivo` usa `frontend/` como diretório raiz. A configuração em `frontend/vercel.json` executa `npm run build:demo` e publica `dist/`. A demonstração usa dados fictícios na memória da aba. O Docker executa o build integrado e serve o React e a API Spring no mesmo endereço.
 
 ## Operar a instalação hospedada
 
-O projeto Vercel da raiz serve a interface e a API Java no mesmo contêiner. O projeto em `frontend/` publica a demonstração independente. Na raiz, `vercel deploy --prod` publica a aplicação integrada. O hostname canônico deve coincidir com `APP_PUBLIC_HOST` para as verificações de origem feitas pelo Spring.
+O projeto Vercel `trilha-selecao-app` usa a raiz do repositório e o Dockerfile para servir a interface e a API Java no mesmo contêiner. O hostname canônico deve coincidir com `APP_PUBLIC_HOST` para as verificações de origem feitas pelo Spring.
 
 Em produção, a Vercel termina o HTTPS no gateway. O conector HTTP interno representa a origem pública canônica e só usa o modo gerenciado com os perfis `prod,vercel`, `VERCEL=1` e `VERCEL_ENV=production`. O Java usa `PORT=8080` e até três conexões de banco por instância. Para distribuir as cotas entre visitantes, a aplicação considera o IP fornecido pelo gateway. A contagem continua separada por instância.
 
@@ -108,4 +108,4 @@ O perfil Vercel seleciona o armazenamento privado com `BLOB_STORE_ID` e `BLOB_RE
 
 A conta administrativa inicial é provisionada uma vez. Depois da criação, retire as variáveis de bootstrap `ADMIN_EMAIL` e `ADMIN_PASSWORD` e publique novamente. A autenticação subsequente usa a conta registrada no banco.
 
-Os pushes executam a CI no GitHub Actions. A publicação na Vercel usa a CLI. Para ativar deploy por push, o proprietário precisa instalar a integração GitHub da Vercel e permitir acesso ao repositório `kaua-chavesvk/processo-seletivo`. Ao vincular os projetos, use a raiz do repositório para a aplicação e `frontend/` para a demonstração. [Integração oficial](https://vercel.com/docs/git/vercel-for-github)
+Os dois projetos estão vinculados a `kaua-chavesvk/processo-seletivo` e usam `main` como branch de produção. Um push nessa branch aciona a integração da Vercel. O GitHub Actions executa os testes em paralelo. Para conferir uma publicação, compare o SHA do commit no GitHub com o exibido em **Deployments** de cada projeto e abra os dois endereços de produção. [Aplicação integrada](https://trilha-selecao-app.vercel.app) · [Demonstração](https://trilha-processo-seletivo.vercel.app)

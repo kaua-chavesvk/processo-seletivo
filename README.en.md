@@ -14,6 +14,8 @@ Open **Marina Costa** in **Triagem**, select **Entrevista** and click **Salvar e
 
 ## Engineering decisions
 
+The live application and the demo have separate Vercel projects. Both track this repository’s `main` branch for production deployments.
+
 - **Concurrent reviews.** The recruitment service checks company membership, locks the application row and validates the transition using a plain Java state machine. Stage and history changes commit together. [State machine](src/main/java/br/dev/selecao/candidatura/Funil.java) · [Application service](src/main/java/br/dev/selecao/candidatura/CandidaturasService.java)
 - **Sessions and authorization.** The React client keeps both tokens in tab memory and requires a new login on reload. Spring authorizes each request. Candidates read their own history, recruiters work within their company and administrators onboard companies and recruiters.
 - **Private résumés.** In the live deployment, Spring validates PDFs up to 4 MiB, stores them in a private Vercel Blob store and authorizes downloads. Docker uses a local volume by default. An S3-compatible adapter is also available. [Candidate history from a production smoke test](docs/historico.png)

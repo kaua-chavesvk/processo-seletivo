@@ -38,6 +38,8 @@ A captura veio de um teste com duas contas fictícias, um PDF de exemplo e uma m
 
 ## Arquitetura publicada
 
+A aplicação integrada e a demonstração têm projetos próprios na Vercel. Ambos acompanham a branch `main` deste repositório.
+
 ```mermaid
 flowchart LR
   B[Navegador] -->|HTTPS| G[Vercel]

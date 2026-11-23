@@ -235,6 +235,13 @@ function App() {
               <div>
                 <b>Modo demonstração</b>
                 <small>Dados fictícios nesta sessão</small>
+                <a
+                  href="https://github.com/kaua-chavesvk/processo-seletivo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Código no GitHub <ArrowUpRight size={13} aria-hidden="true" />
+                </a>
               </div>
             </div>
           )}
