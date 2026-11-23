@@ -1,4 +1,4 @@
-import type { Profile } from "./model";
+import type { Job, Profile } from "./model";
 type Session = { accessToken: string; refreshToken: string };
 let session: Session | null = null;
 let generation = 0;
@@ -75,6 +75,13 @@ export async function request(path: string, init: RequestInit = {}) {
 }
 export async function read<T>(path: string, init?: RequestInit): Promise<T> {
   return (await request(path, init)).json();
+}
+export async function readPublicJob(id: string): Promise<Job | null> {
+  if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) return null;
+  const response = await send("/vagas/" + id);
+  if (response.status === 404) return null;
+  if (!response.ok) throw await error(response);
+  return response.json();
 }
 export async function list<T>(path: string): Promise<T[]> {
   const result: T[] = [];

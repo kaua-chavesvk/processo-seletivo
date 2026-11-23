@@ -36,7 +36,7 @@ import {
   type Stage,
 } from "./model";
 import { jobs as exampleJobs, sample } from "./demo";
-import { json, list, logout, read, request } from "./api";
+import { json, list, logout, read, readPublicJob, request } from "./api";
 import { Operacao } from "./Operacao";
 import { Avatar, Board } from "./Board";
 import { Auth, Details, Dialog, JobDetails } from "./Dialogs";
@@ -50,8 +50,7 @@ const views = {
   vagas: { title: "Vagas abertas", icon: BriefcaseBusiness },
   minhas: { title: "Minhas candidaturas", icon: FileText },
 };
-type Open =
-  { type: "auth" } | { type: "job"; job: Job } | { type: "card"; card: Card };
+type Open = { type: "auth" } | { type: "card"; card: Card };
 const routes = () => location.hash.slice(1);
 function App() {
   const [profile, setProfile] = useState<Profile | null>(null),
@@ -60,9 +59,10 @@ function App() {
     [opened, setOpen] = useState<Open | null>(null),
     [mobile, setMobile] = useState(false),
     [notice, setNotice] = useState(""),
+    [movedDemoId, setMovedDemoId] = useState(""),
     [revision, revise] = useState(0);
   const [gerenciar, setGerenciar] = useState(false);
-  const afterLogin = useRef<Job | null>(null);
+  const detailHeading = useRef<HTMLHeadingElement>(null);
   const recruiter = demo || profile?.papel === "RECRUTADOR",
     candidate = demo || profile?.papel === "CANDIDATO";
   const links: View[] = [
@@ -70,7 +70,13 @@ function App() {
     "vagas",
     ...(candidate ? ["minhas" as View] : []),
   ];
-  const view = links.includes(route as View) ? (route as View) : links[0];
+  const jobRouteId = route.startsWith("vagas/")
+    ? route.slice("vagas/".length)
+    : "";
+  const demoTimelineId =
+    demo && route.startsWith("minhas/") ? route.slice("minhas/".length) : "";
+  const section = jobRouteId ? "vagas" : demoTimelineId ? "minhas" : route;
+  const view = links.includes(section as View) ? (section as View) : links[0];
   const user = demo
     ? {
         nome: view === "minhas" ? "Marina Costa" : "Lia Mendes",
@@ -83,6 +89,7 @@ function App() {
       setMobile(false);
       setOpen(null);
       setNotice("");
+      setMovedDemoId("");
     };
     const expired = () => {
       setGerenciar(false);
@@ -107,10 +114,19 @@ function App() {
   });
   const jobs = useQuery({
     queryKey: ["jobs", view === "funil", profile?.id],
+    enabled: !jobRouteId && view !== "minhas",
     queryFn: () =>
       demo
         ? Promise.resolve(exampleJobs)
         : list<Job>(view === "funil" ? "/painel/vagas" : "/vagas"),
+  });
+  const publicJob = useQuery({
+    queryKey: ["public-job", jobRouteId],
+    enabled: !!jobRouteId,
+    queryFn: () =>
+      demo
+        ? Promise.resolve(exampleJobs.find((j) => j.id === jobRouteId) ?? null)
+        : readPublicJob(jobRouteId),
   });
   const jobId = jobs.data?.some((j) => j.id === chosen)
     ? chosen
@@ -129,14 +145,26 @@ function App() {
     queryFn: () =>
       demo ? Promise.resolve(sample.mine()) : list<Card>("/painel/minhas"),
   });
+  const sharedJob = publicJob.data;
+  const demoApplication = demoTimelineId
+    ? mine.data?.find((c) => c.id === demoTimelineId)
+    : undefined;
+  useEffect(() => {
+    detailHeading.current?.focus();
+  }, [route, sharedJob?.id, demoApplication?.id]);
+  const timelineLink = movedDemoId && (
+    <a href={"#minhas/" + movedDemoId}>
+      Ver como Marina acompanha essa mudança
+    </a>
+  );
   async function refresh() {
     revise((x) => x + 1);
     await Promise.all(
       ["board", "mine"].map((k) => client.invalidateQueries({ queryKey: [k] })),
     );
   }
-  async function move(card: Card, stage: Stage) {
-    if (demo) sample.move(card.id, stage);
+  async function move(card: Card, stage: Stage, note?: string) {
+    if (demo) sample.move(card.id, stage, note);
     else if (stage === "DESISTIU")
       await request("/candidaturas/" + card.id + "/desistencia", {
         method: "PATCH",
@@ -144,7 +172,7 @@ function App() {
     else
       await request(
         "/candidaturas/" + card.id + "/etapa",
-        json("PATCH", { novaEtapa: stage }),
+        json("PATCH", { novaEtapa: stage, observacao: note }),
       );
     await refresh();
     setOpen((current) =>
@@ -153,6 +181,9 @@ function App() {
         : current,
     );
     setNotice("Etapa atualizada para " + labels[stage] + ".");
+    setMovedDemoId(
+      demo && view === "funil" && sample.isMarina(card) ? card.id : "",
+    );
   }
   async function signOut() {
     let message = "Sessão encerrada.";
@@ -175,15 +206,12 @@ function App() {
     setProfile(p);
     choose("");
     setNotice("Você entrou como " + p.nome + ".");
-    if (afterLogin.current && p.papel === "CANDIDATO") {
-      setOpen({ type: "job", job: afterLogin.current });
-    } else {
-      setOpen(null);
+    setOpen(null);
+    if (!jobRouteId || p.papel !== "CANDIDATO") {
       location.hash = p.papel === "RECRUTADOR" ? "funil" : "vagas";
     }
-    afterLogin.current = null;
   }
-  const current = view === "minhas" ? mine : jobs;
+  const current = jobRouteId ? publicJob : view === "minhas" ? mine : jobs;
   const failure = current.error || (view === "funil" ? board.error : null);
   return (
     <div className="app">
@@ -312,6 +340,7 @@ function App() {
           {notice && (
             <div className="notice" role="status">
               {notice}
+              {opened?.type !== "card" && timelineLink}
               <button
                 className="icon"
                 aria-label="Dispensar aviso"
@@ -334,6 +363,62 @@ function App() {
               >
                 Tentar novamente
               </button>
+            </section>
+          ) : jobRouteId ? (
+            <section className="job-detail">
+              <a href="#vagas">Voltar às vagas abertas</a>
+              {publicJob.isPending ? (
+                <p role="status">Carregando vaga…</p>
+              ) : sharedJob ? (
+                <>
+                  <h1 ref={detailHeading} tabIndex={-1}>
+                    {sharedJob.titulo}
+                  </h1>
+                  <JobDetails
+                    key={sharedJob.id}
+                    job={sharedJob}
+                    limitePdf={recursos.data?.limitePdf}
+                    erroConfig={recursos.isError}
+                    recarregar={() => void recursos.refetch()}
+                    canApply={candidate}
+                    guest={!demo && !profile}
+                    enter={() => setOpen({ type: "auth" })}
+                    done={() => {
+                      void refresh();
+                      location.hash = "minhas";
+                    }}
+                  />
+                </>
+              ) : (
+                <h1>Vaga indisponível</h1>
+              )}
+            </section>
+          ) : demoTimelineId ? (
+            <section className="job-detail">
+              <a href="#funil">Voltar ao funil de seleção</a>
+              {mine.isPending ? (
+                <p role="status">Carregando candidatura…</p>
+              ) : demoApplication ? (
+                <>
+                  <div>
+                    <p className="eyebrow">
+                      <span /> VISÃO DA CANDIDATA
+                    </p>
+                    <h1 ref={detailHeading} tabIndex={-1}>
+                      {demoApplication.nome}
+                    </h1>
+                  </div>
+                  <Details
+                    key={demoApplication.id}
+                    card={demoApplication}
+                    own
+                    move={move}
+                    changed={revision}
+                  />
+                </>
+              ) : (
+                <h1>Candidatura indisponível nesta demonstração</h1>
+              )}
             </section>
           ) : view === "funil" && (jobId || jobs.isPending) ? (
             <Board
@@ -385,15 +470,19 @@ function App() {
                           <span key={t}>{t}</span>
                         ))}
                       </div>
-                      <button
-                        className="link"
-                        onClick={() => setOpen({ type: "job", job: j })}
-                      >
+                      <a className="link" href={"#vagas/" + j.id}>
                         Ver vaga <ArrowUpRight size={16} />
-                      </button>
+                      </a>
                     </article>
                   ))}
-                  {!jobs.data?.length && <p>Nenhuma vaga publicada no momento. <a href="https://trilha-processo-seletivo.vercel.app">Explorar o funil com dados fictícios</a></p>}
+                  {!jobs.data?.length && (
+                    <p>
+                      Nenhuma vaga publicada no momento.{" "}
+                      <a href="https://trilha-processo-seletivo.vercel.app">
+                        Explorar o funil com dados fictícios
+                      </a>
+                    </p>
+                  )}
                 </div>
               ) : view === "minhas" ? (
                 <div className="applications">
@@ -457,43 +546,23 @@ function App() {
       {opened && (
         <Dialog
           title={
-            opened.type === "auth"
-              ? "Acessar a plataforma"
-              : opened.type === "job"
-                ? opened.job.titulo
-                : opened.card.nome
+            opened.type === "auth" ? "Acessar a plataforma" : opened.card.nome
           }
           close={() => {
             setOpen(null);
-            afterLogin.current = null;
           }}
         >
           {opened.type === "auth" ? (
             <Auth done={signedIn} />
-          ) : opened.type === "job" ? (
-            <JobDetails
-              job={opened.job}
-              limitePdf={recursos.data?.limitePdf}
-              erroConfig={recursos.isError}
-              recarregar={() => void recursos.refetch()}
-              canApply={candidate}
-              guest={!demo && !profile}
-              enter={() => {
-                afterLogin.current = opened.job;
-                setOpen({ type: "auth" });
-              }}
-              done={() => {
-                void refresh();
-                setOpen(null);
-                location.hash = "minhas";
-              }}
-            />
           ) : (
             <Details
               card={opened.card}
               own={view === "minhas"}
               move={move}
               changed={revision}
+              timelineLink={
+                movedDemoId === opened.card.id ? timelineLink : undefined
+              }
             />
           )}
         </Dialog>

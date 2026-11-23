@@ -10,9 +10,9 @@ Uma candidatura começa com um PDF e passa por várias pessoas. O Trilha dá ao 
 
 ## Um minuto no projeto
 
-1. Na demonstração, abra **Marina Costa** em **Triagem**, escolha **Entrevista** e clique em **Salvar etapa**. Também é possível arrastar o cartão no quadro.
-2. Abra **Minhas candidaturas**, selecione **Product Designer** e confira a nova etapa no histórico da Marina.
-3. Em **Vagas abertas**, escolha **Analista de Dados** e simule uma inscrição. Recarregar a página restaura os dados fictícios.
+1. Na demonstração, abra **Marina Costa** em **Triagem**, escolha **Entrevista** e escreva uma orientação, por exemplo, “Leve um projeto para a conversa”. Clique em **Salvar etapa**. No celular, o funil abre em lista e permite filtrar por etapa. No desktop, também dá para arrastar o cartão entre colunas.
+2. Clique em **Ver como Marina acompanha essa mudança**. O histórico da candidata mostra a entrevista e a orientação que você acabou de escrever.
+3. Abra a [vaga fictícia de Analista de Dados](https://trilha-processo-seletivo.vercel.app/#vagas/dados). Use **Copiar link da vaga** para abrir a mesma oportunidade em outra aba ou **Simular candidatura** para experimentar a inscrição. Recarregar a demonstração restaura os dados fictícios.
 
 A aplicação com login usa o PostgreSQL e o armazenamento privado de PDFs. A lista pública reflete as vagas que um recrutador publicou. As inscrições e os arquivos enviados por esse endereço persistem entre sessões.
 

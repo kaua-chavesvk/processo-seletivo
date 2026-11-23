@@ -410,6 +410,7 @@ main {
 }
 .tools,
 .tools-right,
+.stage-tools,
 .tabs,
 .switch,
 .search {
@@ -420,6 +421,20 @@ main {
   margin: 20px 0 15px;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
+}
+.stage-tools {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.stage-filter {
+  max-width: 100%;
+  border: 1px solid var(--line);
+  padding: 8px;
+  border-radius: 8px;
+  background: white;
+  color: inherit;
+  font-size: 12px;
 }
 .tools-right {
   gap: 9px;
@@ -669,7 +684,10 @@ main {
 }
 .notice {
   margin-bottom: 15px;
-  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.notice .icon {
+  margin-left: auto;
 }
 .primary,
 .secondary,
@@ -852,6 +870,20 @@ dialog h2 {
 .timeline p {
   width: 100%;
   font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.job-detail {
+  max-width: 650px;
+  display: grid;
+  gap: 18px;
+}
+.job-detail > a,
+.job-detail .secondary {
+  justify-self: start;
+}
+.job-detail .stack > form {
+  max-width: 440px;
 }
 p[role="alert"] {
   color: #842849;
@@ -934,18 +966,35 @@ p[role="alert"] {
   }
   .stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin: 20px 0 15px;
+    margin: 14px 0 12px;
+    gap: 5px;
   }
   .stat {
-    padding: 11px;
+    padding: 7px 10px;
+  }
+  .stat-icon {
+    display: none;
+  }
+  .stat > div {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
   }
   .stat strong {
-    font-size: 24px;
+    font-size: 18px;
+    margin: 0;
   }
   .tools {
     align-items: flex-start;
     flex-direction: column;
     gap: 9px;
+    margin: 12px 0;
+  }
+  .stage-tools {
+    width: 100%;
+    justify-content: space-between;
   }
   .tools-right,
   .search {

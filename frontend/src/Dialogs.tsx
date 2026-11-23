@@ -11,6 +11,7 @@ import {
   Clock3,
   Download,
   FileText,
+  Link2,
   MapPin,
   X,
 } from "lucide-react";
@@ -166,7 +167,17 @@ export function JobDetails({
 }) {
   const [file, setFile] = useState<File>(),
     [error, setError] = useState(""),
+    [share, setShare] = useState<"copied" | "manual" | null>(null),
     [busy, setBusy] = useState(false);
+  const publicUrl = location.origin + location.pathname + "#vagas/" + job.id;
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setShare("copied");
+    } catch {
+      setShare("manual");
+    }
+  }
   async function apply(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -208,6 +219,20 @@ export function JobDetails({
           <span key={t}>{t}</span>
         ))}
       </div>
+      <button className="secondary" onClick={copyLink}>
+        <Link2 size={16} /> Copiar link da vaga
+      </button>
+      {share === "copied" && <p role="status">Link da vaga copiado.</p>}
+      {share === "manual" && (
+        <label>
+          Copie o endereço da vaga
+          <input
+            readOnly
+            value={publicUrl}
+            onFocus={(e) => e.target.select()}
+          />
+        </label>
+      )}
       {guest && (
         <button className="primary" onClick={enter}>
           Entrar para se candidatar
@@ -260,11 +285,13 @@ export function Details({
   own,
   move,
   changed,
+  timelineLink,
 }: {
   card: Card;
   own: boolean;
-  move: (c: Card, s: Stage) => Promise<void>;
+  move: (c: Card, s: Stage, note?: string) => Promise<void>;
   changed: number;
+  timelineLink?: ReactNode;
 }) {
   const history = useQuery({
     queryKey: ["history", card.id, changed],
@@ -275,6 +302,7 @@ export function Details({
   });
   const available = options(card.etapaAtual);
   const [stage, setStage] = useState<Stage | "">(""),
+    [note, setNote] = useState(""),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [confirm, setConfirm] = useState(false);
@@ -284,6 +312,7 @@ export function Details({
     try {
       await fn();
       setStage("");
+      setNote("");
       setConfirm(false);
     } catch (ex) {
       setError((ex as Error).message);
@@ -319,6 +348,7 @@ export function Details({
           ))}
         </ol>
       )}
+      {timelineLink}
       {!own && !demo && (
         <button
           className="secondary"
@@ -334,7 +364,8 @@ export function Details({
           className="stack"
           onSubmit={(e) => {
             e.preventDefault();
-            if (stage) void action(() => move(card, stage));
+            if (stage)
+              void action(() => move(card, stage, note.trim() || undefined));
           }}
         >
           <label>
@@ -351,6 +382,15 @@ export function Details({
                 </option>
               ))}
             </select>
+          </label>
+          <label>
+            Orientação visível ao candidato (opcional)
+            <textarea
+              value={note}
+              rows={2}
+              maxLength={4000}
+              onChange={(e) => setNote(e.target.value)}
+            />
           </label>
           <button className="primary" disabled={!stage || busy}>
             Salvar etapa

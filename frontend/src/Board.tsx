@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowUpRight,
   BriefcaseBusiness,
@@ -52,7 +52,8 @@ export function Board({
 }) {
   const [term, search] = useState(""),
     [archive, showArchive] = useState(false),
-    [rows, showRows] = useState(false),
+    [rows, showRows] = useState(() => matchMedia("(max-width: 650px)").matches),
+    [stageFilter, filterStage] = useState<Stage | "">(""),
     [drag, setDrag] = useState<Card | null>(null),
     [over, setOver] = useState<Stage | null>(null),
     [error, setError] = useState("");
@@ -66,6 +67,17 @@ export function Board({
     normalize(c.nome).includes(normalize(term)),
   );
   const stages = archive ? closed : active;
+  const displayedStages = rows && stageFilter ? [stageFilter] : stages;
+  useEffect(() => {
+    const screen = matchMedia("(max-width: 650px)");
+    const resize = (event: MediaQueryListEvent) => showRows(event.matches);
+    screen.addEventListener("change", resize);
+    return () => screen.removeEventListener("change", resize);
+  }, []);
+  function changeTab(nextArchive: boolean) {
+    if (archive !== nextArchive) filterStage("");
+    showArchive(nextArchive);
+  }
   async function drop(s: Stage) {
     setOver(null);
     setDrag(null);
@@ -157,21 +169,38 @@ export function Board({
         )}
       </section>
       <div className="tools">
-        <div className="tabs" aria-label="Situação">
-          <button
-            className={!archive ? "on" : ""}
-            aria-pressed={!archive}
-            onClick={() => showArchive(false)}
-          >
-            Em andamento
-          </button>
-          <button
-            className={archive ? "on" : ""}
-            aria-pressed={archive}
-            onClick={() => showArchive(true)}
-          >
-            Encerradas
-          </button>
+        <div className="stage-tools">
+          <div className="tabs" aria-label="Situação">
+            <button
+              className={!archive ? "on" : ""}
+              aria-pressed={!archive}
+              onClick={() => changeTab(false)}
+            >
+              Em andamento
+            </button>
+            <button
+              className={archive ? "on" : ""}
+              aria-pressed={archive}
+              onClick={() => changeTab(true)}
+            >
+              Encerradas
+            </button>
+          </div>
+          {rows && (
+            <select
+              className="stage-filter"
+              aria-label="Filtrar por etapa"
+              value={stageFilter}
+              onChange={(e) => filterStage(e.target.value as Stage | "")}
+            >
+              <option value="">Todas as etapas</option>
+              {stages.map((stage) => (
+                <option value={stage} key={stage}>
+                  {labels[stage]}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="tools-right">
           <label className="search">
@@ -208,7 +237,7 @@ export function Board({
         <p role="status">Carregando candidaturas…</p>
       ) : (
         <div className={rows ? "board rows" : "board"}>
-          {stages.map((s) => {
+          {displayedStages.map((s) => {
             const group = visible.filter((c) => c.etapaAtual === s);
             return (
               <section

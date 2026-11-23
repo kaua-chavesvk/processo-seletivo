@@ -13,7 +13,9 @@ test("candidato e recrutador percorrem o mesmo processo na API Java", async ({
   const name = "Pessoa " + randomUUID().slice(0, 8);
   const email = randomUUID() + "@example.invalid";
   await page.goto("/");
-  await page.getByRole("button", { name: "Ver vaga" }).first().click();
+  await page.getByRole("link", { name: "Ver vaga" }).first().click();
+  const jobUrl = page.url();
+  await page.reload();
   await page.getByRole("button", { name: "Entrar para se candidatar" }).click();
   await page.getByRole("button", { name: "Criar conta de candidato" }).click();
   await page.getByLabel("Nome completo").fill(name);
@@ -23,6 +25,7 @@ test("candidato e recrutador percorrem o mesmo processo na API Java", async ({
   await page
     .getByLabel("Currículo em PDF")
     .setInputFiles(resolve("../scripts/fixtures/curriculo-demo.pdf"));
+  await expect(page).toHaveURL(jobUrl);
   await page.getByRole("button", { name: "Enviar candidatura" }).click();
   await expect(
     page.getByRole("button", { name: /Desenvolvedor Java/ }),
@@ -50,12 +53,18 @@ test("candidato e recrutador percorrem o mesmo processo na API Java", async ({
     await panel.getByRole("button", { name: "Baixar currículo" }).click();
     expect((await file).suggestedFilename()).toBe("curriculo.pdf");
     await panel.getByLabel("Alterar etapa").selectOption("ENTREVISTA");
+    const note = "Escolha um projeto para apresentar na entrevista.";
+    await panel.getByLabel(/Orientação visível/).fill(note);
     await panel.getByRole("button", { name: "Salvar etapa" }).click();
     await expect(panel.getByRole("listitem").last()).toContainText(
       "Entrevista",
     );
     await page.getByRole("button", { name: /Desenvolvedor Java/ }).click();
     await expect(page.getByRole("listitem").last()).toContainText("Entrevista");
+    await expect(page.getByRole("listitem").last()).toContainText(note);
+    await expect(
+      panel.getByRole("link", { name: /Ver como Marina/ }),
+    ).toHaveCount(0);
   } finally {
     await recruiter.close();
   }

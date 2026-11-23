@@ -60,9 +60,14 @@ const roster: [string, Stage, number][] = [
 const cards: Card[] = [];
 const events = new Map<string, Event[]>();
 const demoName = "Marina Costa";
-function append(card: Card, stage: Stage, when: string) {
+function append(card: Card, stage: Stage, when: string, observacao?: string) {
   const log = events.get(card.id) ?? [];
-  log.push({ id: crypto.randomUUID(), etapaNova: stage, alteradoEm: when });
+  log.push({
+    id: crypto.randomUUID(),
+    etapaNova: stage,
+    alteradoEm: when,
+    observacao,
+  });
   events.set(card.id, log);
   card.etapaAtual = stage;
 }
@@ -87,7 +92,8 @@ export const sample = {
     cards.filter((c) => c.vagaId === id).map((c) => ({ ...c })),
   mine: () => cards.filter((c) => c.nome === demoName).map((c) => ({ ...c })),
   history: (id: string) => [...(events.get(id) ?? [])],
-  move(id: string, stage: Stage) {
+  isMarina: (card: Card) => card.nome === demoName,
+  move(id: string, stage: Stage, observacao?: string) {
     const card = cards.find((c) => c.id === id);
     if (
       !card ||
@@ -99,7 +105,7 @@ export const sample = {
       )
     )
       throw new Error("Mudança de etapa indisponível.");
-    append(card, stage, new Date().toISOString());
+    append(card, stage, new Date().toISOString(), observacao);
   },
   apply(job: Job) {
     if (cards.some((c) => c.nome === demoName && c.vagaId === job.id))

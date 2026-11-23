@@ -10,7 +10,11 @@ Trilha follows a job application from the first PDF submission through the hirin
 
 ## Try it in a minute
 
-Open **Marina Costa** in **Triagem**, select **Entrevista** and click **Salvar etapa**. Open **Minhas candidaturas** and select **Product Designer** to see the candidate’s timeline. The demo is in Portuguese, uses fictional records in browser memory and resets on reload. The live application uses authentication, persistent database records and private file storage. Its openings page reflects what recruiters have published.
+1. Open **Marina Costa** in **Triagem**, select **Entrevista**, add an optional message for the candidate and click **Salvar etapa**. On a phone, the funnel opens as a list with a stage filter. Desktop opens in board view.
+2. Click **Ver como Marina acompanha essa mudança** to see the interview and your message in Marina’s own timeline.
+3. Open the [sample data analyst vacancy](https://trilha-processo-seletivo.vercel.app/#vagas/dados). **Copiar link da vaga** copies the address of that opening. **Simular candidatura** lets you try applying.
+
+The demo is in Portuguese, uses fictional records in browser memory and resets on reload. The live application uses authentication, persistent database records and private file storage. Its openings page reflects what recruiters have published.
 
 ## Engineering decisions
 
