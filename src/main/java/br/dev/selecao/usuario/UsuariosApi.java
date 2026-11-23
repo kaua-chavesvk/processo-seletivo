@@ -26,7 +26,7 @@ public class UsuariosApi {
 
   public record Resumo(UUID id, String nome, String email, Papel papel, boolean ativo) {
     public static Resumo de(Usuario u) {
-      return new Resumo(u.id, u.nome, u.email, u.papel, u.ativo);
+      return new Resumo(u.getId(), u.getNome(), u.getEmail(), u.getPapel(), u.isAtivo());
     }
   }
 
@@ -72,10 +72,12 @@ public class UsuariosApi {
 
   @PutMapping("/usuarios/me")
   public Resumo perfil(@Valid @RequestBody Perfil d) {
-    var u = banco.bloquear(Usuario.class, ator.exigir(Papel.CANDIDATO).id);
+    var u = banco.bloquear(Usuario.class, ator.exigir(Papel.CANDIDATO).getId());
     String email = d.email.toLowerCase(Locale.ROOT);
-    if (usuarios.findByEmailIgnoreCase(email).filter(outro -> !outro.id.equals(u.id)).isPresent())
-      throw Falha.conflito("Email já cadastrado");
+    if (usuarios
+        .findByEmailIgnoreCase(email)
+        .filter(outro -> !outro.getId().equals(u.getId()))
+        .isPresent()) throw Falha.conflito("Email já cadastrado");
     u.nome = d.nome.trim();
     u.email = email;
     return Resumo.de(u);

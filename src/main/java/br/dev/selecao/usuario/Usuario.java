@@ -21,19 +21,32 @@ public class Usuario {
   boolean ativo;
   Instant criadoEm;
 
-  public UUID id() {
+  public UUID getId() {
     return id;
   }
 
-  public String senhaHash() {
+  public String getNome() {
+    return nome;
+  }
+
+  public String getEmail() {
+    return email;
+  }
+
+  public Instant getCriadoEm() {
+    return criadoEm;
+  }
+
+  @com.fasterxml.jackson.annotation.JsonIgnore
+  public String getSenhaHash() {
     return senhaHash;
   }
 
-  public Papel papel() {
+  public Papel getPapel() {
     return papel;
   }
 
-  public boolean ativo() {
+  public boolean isAtivo() {
     return ativo;
   }
 

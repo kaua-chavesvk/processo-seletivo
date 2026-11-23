@@ -5,27 +5,28 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.web.servlet.MultipartProperties;
 import org.springframework.core.io.*;
 import org.springframework.stereotype.Component;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 
 @Component
 public class ArmazenamentoLocal implements ArmazenamentoCurriculo {
   private final Path raiz;
 
-  @org.springframework.beans.factory.annotation.Value(
-      "${spring.servlet.multipart.max-file-size:5MB}")
-  private org.springframework.util.unit.DataSize tamanho =
-      org.springframework.util.unit.DataSize.ofMegabytes(5);
+  private final DataSize tamanho;
 
-  public ArmazenamentoLocal(@Value("${app.uploads}") String diretorio) throws IOException {
+  public ArmazenamentoLocal(
+      @Value("${app.uploads}") String diretorio, MultipartProperties multipart) throws IOException {
+    tamanho = multipart.getMaxFileSize();
     raiz = Files.createDirectories(Path.of(diretorio).toAbsolutePath().normalize());
   }
 
   public String salvar(MultipartFile arquivo) {
     long limite = tamanho.toBytes();
     if (!"application/pdf".equalsIgnoreCase(arquivo.getContentType()) || arquivo.getSize() > limite)
-      throw Falha.invalida("Envie um PDF de até 5 MB");
+      throw Falha.invalida("Envie um PDF de até " + limiteFormatado(limite));
     String chave = UUID.randomUUID() + ".pdf";
     try (var entrada = arquivo.getInputStream()) {
       byte[] prefixo = entrada.readNBytes(4);
@@ -50,6 +51,12 @@ public class ArmazenamentoLocal implements ArmazenamentoCurriculo {
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
+  }
+
+  private static String limiteFormatado(long bytes) {
+    if (bytes % (1024 * 1024) == 0) return bytes / (1024 * 1024) + " MB";
+    if (bytes % 1024 == 0) return bytes / 1024 + " KB";
+    return bytes + " bytes";
   }
 
   public Resource carregar(String chave) {

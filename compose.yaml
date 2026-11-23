@@ -17,7 +17,15 @@ services:
     build: .
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
+      test:
+        - CMD
+        - /bin/bash
+        - -ec
+        - |
+          exec 3<>/dev/tcp/127.0.0.1/8080
+          printf 'GET /actuator/health HTTP/1.0\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3
+          read -r protocolo codigo restante <&3
+          [[ "$$protocolo" == HTTP/* && "$$codigo" == 200 ]]
       interval: 15s
       timeout: 5s
       start_period: 90s
@@ -33,6 +41,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-selecao}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      APP_ACCESS_TTL: ${APP_ACCESS_TTL:-15m}
       JWT_SECRET: ${JWT_SECRET:-}
     volumes:
       - curriculos:/app/uploads

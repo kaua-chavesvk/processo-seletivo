@@ -13,9 +13,24 @@ import java.nio.file.Path;
 import java.util.*;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
+import org.springframework.boot.autoconfigure.web.servlet.MultipartProperties;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 
 class DominioTest {
+  private MultipartProperties configuracaoPdf(long limite) {
+    var propriedades = new MultipartProperties();
+    propriedades.setMaxFileSize(DataSize.ofBytes(limite));
+    return propriedades;
+  }
+
+  @Test
+  void informaLimiteConfigurado(@TempDir Path raiz) throws Exception {
+    var local = new ArmazenamentoLocal(raiz.toString(), configuracaoPdf(1536));
+    var arquivo = mock(MultipartFile.class);
+    assertThatThrownBy(() -> local.salvar(arquivo)).hasMessage("Envie um PDF de até 1536 bytes");
+  }
+
   @Test
   void matrizCompletaDoFunil() {
     var avancos = List.of(TRIAGEM, ENTREVISTA, TESTE_TECNICO, PROPOSTA, CONTRATADO);
@@ -53,14 +68,17 @@ class DominioTest {
     System.arraycopy(
         "%PDF".getBytes(java.nio.charset.StandardCharsets.US_ASCII), 0, conteudo, 0, 4);
     when(arquivo.getInputStream()).thenReturn(new java.io.ByteArrayInputStream(conteudo));
-    assertThatThrownBy(() -> new ArmazenamentoLocal(raiz.toString()).salvar(arquivo))
+    assertThatThrownBy(
+            () ->
+                new ArmazenamentoLocal(raiz.toString(), configuracaoPdf(5 * 1024 * 1024))
+                    .salvar(arquivo))
         .isInstanceOf(Falha.class);
     assertThat(raiz).isEmptyDirectory();
   }
 
   @Test
   void rejeitaArquivoGrandeAntesDeLer(@TempDir Path raiz) throws Exception {
-    var local = new ArmazenamentoLocal(raiz.toString());
+    var local = new ArmazenamentoLocal(raiz.toString(), configuracaoPdf(5 * 1024 * 1024));
     var arquivo = mock(MultipartFile.class);
     when(arquivo.getContentType()).thenReturn("application/pdf");
     when(arquivo.getSize()).thenReturn(5L * 1024 * 1024 + 1);

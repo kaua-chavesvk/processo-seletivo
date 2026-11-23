@@ -50,7 +50,7 @@ public class CandidaturasApi {
     var vaga = banco.bloquear(Vaga.class, id);
     if (vaga.getStatus() != Status.PUBLICADA)
       throw Falha.invalida("Vaga indisponível para inscrição");
-    if (candidaturas.existsByVagaIdAndCandidatoId(id, u.id()))
+    if (candidaturas.existsByVagaIdAndCandidatoId(id, u.getId()))
       throw Falha.conflito("Candidatura já existente");
     String chave = arquivos.salvar(curriculo);
     TransactionSynchronizationManager.registerSynchronization(
@@ -61,7 +61,7 @@ public class CandidaturasApi {
         });
     var c = new Candidatura();
     c.vagaId = id;
-    c.candidatoId = u.id();
+    c.candidatoId = u.getId();
     c.curriculoCaminho = chave;
     c.etapaAtual = Etapa.TRIAGEM;
     c.criadaEm = c.atualizadaEm = Instant.now();
@@ -76,7 +76,7 @@ public class CandidaturasApi {
       @RequestParam(defaultValue = "20") int size,
       @RequestParam(defaultValue = "criada_em,desc") String sort) {
     return candidaturas
-        .findByCandidatoId(ator.exigir(CANDIDATO).id(), pagina(page, size, sort))
+        .findByCandidatoId(ator.exigir(CANDIDATO).getId(), pagina(page, size, sort))
         .map(mapper::resumo);
   }
 
@@ -89,9 +89,9 @@ public class CandidaturasApi {
       @RequestParam(defaultValue = "20") int size,
       @RequestParam(defaultValue = "criada_em,desc") String sort) {
     var u = ator.exigir(RECRUTADOR, ADMIN);
-    if (u.papel() == RECRUTADOR) ator.empresa(empresaId);
+    if (u.getPapel() == RECRUTADOR) ator.empresa(empresaId);
     var v = banco.obter(Vaga.class, vagaId);
-    if (u.papel() == RECRUTADOR) ator.empresa(v.getEmpresaId());
+    if (u.getPapel() == RECRUTADOR) ator.empresa(v.getEmpresaId());
     if (!v.getEmpresaId().equals(empresaId)) throw Falha.ausente();
     var p = pagina(page, size, sort);
     return (etapa == null
@@ -117,7 +117,7 @@ public class CandidaturasApi {
   }
 
   @GetMapping("/candidaturas/{id}/historico")
-  public List<Historico> historico(@PathVariable UUID id) {
+  public List<CandidaturaMapper.HistoricoDto> historico(@PathVariable UUID id) {
     var u = ator.exigir(ADMIN, RECRUTADOR, CANDIDATO);
     acesso(banco.obter(Candidatura.class, id), u);
     return banco
@@ -125,7 +125,10 @@ public class CandidaturasApi {
         .createQuery(
             "from Historico where candidaturaId=:id order by alteradoEm,id", Historico.class)
         .setParameter("id", id)
-        .getResultList();
+        .getResultList()
+        .stream()
+        .map(mapper::historico)
+        .toList();
   }
 
   @GetMapping(value = "/candidaturas/{id}/curriculo", produces = MediaType.APPLICATION_PDF_VALUE)
@@ -133,11 +136,11 @@ public class CandidaturasApi {
     var u = ator.exigir(ADMIN, RECRUTADOR, CANDIDATO);
     var c = banco.obter(Candidatura.class, id);
     acesso(c, u);
-    if (u.papel() == CANDIDATO) throw Falha.negado();
+    if (u.getPapel() == CANDIDATO) throw Falha.negado();
     return ResponseEntity.ok()
         .contentType(MediaType.APPLICATION_PDF)
         .header("Content-Disposition", "attachment; filename=curriculo.pdf")
-        .body(arquivos.carregar(c.curriculoCaminho));
+        .body(arquivos.carregar(c.getCurriculoCaminho()));
   }
 
   private Pageable pagina(int page, int size, String sort) {
@@ -145,13 +148,14 @@ public class CandidaturasApi {
   }
 
   private void acesso(Candidatura c, Usuario u) {
-    if (u.papel() == CANDIDATO && !c.candidatoId.equals(u.id())) throw Falha.ausente();
-    if (u.papel() == RECRUTADOR) ator.empresa(banco.obter(Vaga.class, c.vagaId).getEmpresaId());
+    if (u.getPapel() == CANDIDATO && !c.getCandidatoId().equals(u.getId())) throw Falha.ausente();
+    if (u.getPapel() == RECRUTADOR)
+      ator.empresa(banco.obter(Vaga.class, c.getVagaId()).getEmpresaId());
   }
 
   private CandidaturaMapper.Resumo mudar(Candidatura c, Etapa nova, Usuario u, String obs) {
-    Etapa anterior = c.etapaAtual;
-    Funil.validar(anterior, nova, u.papel());
+    Etapa anterior = c.getEtapaAtual();
+    Funil.validar(anterior, nova, u.getPapel());
     c.etapaAtual = nova;
     c.atualizadaEm = Instant.now();
     registrar(c, anterior, u, obs);
@@ -160,12 +164,12 @@ public class CandidaturasApi {
 
   private void registrar(Candidatura c, Etapa anterior, Usuario u, String obs) {
     var h = new Historico();
-    h.candidaturaId = c.id;
+    h.candidaturaId = c.getId();
     h.etapaAnterior = anterior;
-    h.etapaNova = c.etapaAtual;
-    h.alteradoPor = u.id();
+    h.etapaNova = c.getEtapaAtual();
+    h.alteradoPor = u.getId();
     h.observacao = obs;
-    h.alteradoEm = c.atualizadaEm;
+    h.alteradoEm = c.getAtualizadaEm();
     banco.inserir(h);
   }
 }

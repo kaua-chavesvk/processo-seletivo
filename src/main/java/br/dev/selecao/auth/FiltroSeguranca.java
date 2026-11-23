@@ -44,11 +44,14 @@ final class FiltroSeguranca extends OncePerRequestFilter {
       try {
         if (!header.startsWith("Bearer ")) throw new IllegalArgumentException();
         var u =
-            usuarios.findById(tokens.ler(header.substring(7))).filter(x -> x.ativo()).orElseThrow();
+            usuarios
+                .findById(tokens.ler(header.substring(7)))
+                .filter(x -> x.isAtivo())
+                .orElseThrow();
         SecurityContextHolder.getContext()
             .setAuthentication(
                 new UsernamePasswordAuthenticationToken(
-                    u, null, List.of(new SimpleGrantedAuthority("ROLE_" + u.papel().name()))));
+                    u, null, List.of(new SimpleGrantedAuthority("ROLE_" + u.getPapel().name()))));
       } catch (io.jsonwebtoken.JwtException
           | IllegalArgumentException
           | NoSuchElementException ex) {

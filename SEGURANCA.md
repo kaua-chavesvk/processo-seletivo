@@ -60,6 +60,8 @@ O script requer Python 3.10+ e consulta o OSV enviando coordenadas de pacote e v
 
 O logout consome o refresh token apresentado. Um access token já emitido continua válido até sua expiração (padrão de 15 minutos). A desativação da conta também impede o uso dos seus access tokens nas próximas requisições.
 
-O limitador usa dois token buckets por endereço TCP com reposição contínua. As capacidades iniciais são 180 chamadas no total e 20 de autenticação. Com 16.384 endereços em memória, novos endereços compartilham uma reserva limitada enquanto não houver entrada ociosa para reaproveitar. Múltiplas réplicas continuam exigindo limitação no gateway.
+O limitador usa dois token buckets por endereço TCP com reposição contínua. As capacidades iniciais são 180 chamadas no total e 20 de autenticação. Ao atingir 16.384 endereços em memória, a API responde 429 e Retry-After: 60 a um endereço novo até que a entrada menos recentemente usada complete um minuto de inatividade. A cota dos clientes já registrados é preservada. Essa escolha limita a memória e impede que diferentes clientes consumam uma reserva comum; o gateway deve controlar pressão distribuída de novos endereços. Múltiplas réplicas continuam exigindo limitação no gateway.
 
 A CI consulta o OSV e falha para avisos novos. As duas exceções documentadas acima se aplicam somente às coordenadas exatas de spring-webmvc 6.2.19. A execução manual sem `--ci` continua sinalizando todos os avisos.
+
+As exceções de versão e aviso ficam em [scripts/excecoes-auditoria.json](scripts/excecoes-auditoria.json). O responsável deve reavaliá-las antes de `expira_em`. À meia-noite UTC dessa data a auditoria falha, inclusive se o aviso tiver desaparecido do OSV, até que a lista seja revisada.

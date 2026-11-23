@@ -47,9 +47,9 @@ public class AuthApi {
       throw Falha.credencial();
     }
     var u = existente.get();
-    if (!encoder.matches(d.senha, u.senhaHash()) || !u.ativo()) throw Falha.credencial();
-    if (encoder.upgradeEncoding(u.senhaHash())) u.atualizarHash(encoder.encode(d.senha));
-    return emitir(u.id());
+    if (!encoder.matches(d.senha, u.getSenhaHash()) || !u.isAtivo()) throw Falha.credencial();
+    if (encoder.upgradeEncoding(u.getSenhaHash())) u.atualizarHash(encoder.encode(d.senha));
+    return emitir(u.getId());
   }
 
   @PostMapping("/refresh")
@@ -73,7 +73,7 @@ public class AuthApi {
             .getResultStream()
             .findFirst()
             .orElseThrow(Falha::credencial);
-    if (!banco.bloquear(Usuario.class, id).ativo()) throw Falha.credencial();
+    if (!banco.bloquear(Usuario.class, id).isAtivo()) throw Falha.credencial();
     int usados =
         banco
             .em

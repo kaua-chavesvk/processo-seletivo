@@ -1,5 +1,7 @@
 """Executa o fluxo de seleção por HTTP em um projeto Compose descartável."""
+import argparse
 import json
+import socket
 import os
 import secrets
 import subprocess
@@ -100,11 +102,17 @@ def demonstrar(api, email_admin, senha_admin):
     print("Histórico consultado pelo candidato: " + " -> ".join(etapas), flush=True)
 
 
-def executar():
+def escolher_porta():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as reserva:
+        reserva.bind(("127.0.0.1", 0))
+        return reserva.getsockname()[1]
+
+
+def executar(manter_imagem=False):
     projeto = "selecao-demo-" + uuid.uuid4().hex
     email = "admin@example.invalid"
     senha = secrets.token_urlsafe(32)
-    ambiente = {**os.environ, "API_PORT": "0", "ADMIN_EMAIL": email, "ADMIN_PASSWORD": senha,
+    ambiente = {**os.environ, "API_PORT": "8080", "ADMIN_EMAIL": email, "ADMIN_PASSWORD": senha,
                 "POSTGRES_PASSWORD": secrets.token_urlsafe(32), "JWT_SECRET": ""}
     compose = ["docker", "compose", "--project-name", projeto, "--file", str(RAIZ / "compose.yaml")]
     def docker(*argumentos, capturar=False):
@@ -113,19 +121,27 @@ def executar():
 
     print(f"Iniciando o projeto temporário {projeto}...", flush=True)
     try:
-        docker("up", "--build", "--detach", "--wait", "--wait-timeout", "240")
+        docker("build", "api")
+        porta_escolhida = escolher_porta()
+        ambiente["API_PORT"] = str(porta_escolhida)
+        docker("up", "--no-build", "--detach", "--wait", "--wait-timeout", "240")
         endereco = docker("port", "api", "8080", capturar=True).stdout.strip()
         host, porta = endereco.rsplit(":", 1)
-        if host != "127.0.0.1":
+        if host != "127.0.0.1" or int(porta) != porta_escolhida:
             raise RuntimeError(f"Endereço local inesperado: {endereco}")
         demonstrar(Api(int(porta)), email, senha)
     finally:
-        docker("down", "--volumes", "--rmi", "local")
-    print("Demonstração concluída e ambiente temporário removido.", flush=True)
+        remocao = [] if manter_imagem else ["--rmi", "local"]
+        docker("down", "--volumes", *remocao)
+    print("Demonstração concluída; contêineres, rede e volumes temporários removidos.", flush=True)
+    if manter_imagem:
+        print(f"Imagem local mantida: {projeto}-api:latest", flush=True)
 
 
 if __name__ == "__main__":
     try:
-        executar()
+        parser = argparse.ArgumentParser(description=__doc__)
+        parser.add_argument("--manter-imagem", action="store_true", help="Preservar a imagem local da API ao finalizar")
+        executar(manter_imagem=parser.parse_args().manter_imagem)
     except (OSError, HTTPException, URLError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
         sys.exit(f"Falha na demonstração: {exc}")

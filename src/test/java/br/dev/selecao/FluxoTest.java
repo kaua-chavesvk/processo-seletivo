@@ -58,7 +58,7 @@ class FluxoTest {
     jdbc.update(
         "update refresh_token set expira_em=current_timestamp - interval '1 day' where"
             + " usuario_id=?",
-        u.id());
+        u.getId());
     var vigente = login(email);
     chamar(
         post("/auth/refresh"),
@@ -68,7 +68,7 @@ class FluxoTest {
     limpeza.removerExpirados();
     assertThat(
             jdbc.queryForObject(
-                "select count(*) from refresh_token where usuario_id=?", Integer.class, u.id()))
+                "select count(*) from refresh_token where usuario_id=?", Integer.class, u.getId()))
         .isEqualTo(1);
     chamar(
         post("/auth/refresh"),
@@ -296,7 +296,21 @@ class FluxoTest {
     chamar(patch(c + "/desistencia"), outro, null, 404);
     chamar(patch(c + "/desistencia"), candidato, null, 200);
     chamar(patch(c + "/etapa"), recrutador, Map.of("novaEtapa", "REPROVADO"), 422);
-    assertThat(chamar(get(c + "/historico"), candidato, null, 200)).hasSize(3);
+    var historico = chamar(get(c + "/historico"), candidato, null, 200);
+    assertThat(historico).hasSize(3);
+    var campos = new HashSet<String>();
+    historico.get(0).fieldNames().forEachRemaining(campos::add);
+    assertThat(campos)
+        .containsExactlyInAnyOrder(
+            "id",
+            "candidaturaId",
+            "etapaAnterior",
+            "etapaNova",
+            "alteradoPor",
+            "observacao",
+            "alteradoEm");
+    assertThat(historico.get(0).get("etapaAnterior").isNull()).isTrue();
+    assertThat(historico.get(1).get("etapaNova").asText()).isEqualTo("ENTREVISTA");
   }
 
   private void validarFiltrosEPaginacao() throws Exception {

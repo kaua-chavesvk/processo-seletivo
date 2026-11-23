@@ -52,7 +52,8 @@ public class VagasApi {
   @PutMapping("/vagas/{id}")
   public VagaMapper.Resumo editar(@PathVariable UUID id, @RequestBody @Valid Dados d) {
     var v = paraEdicao(id);
-    if (v.status != Status.RASCUNHO) throw Falha.invalida("A edição exige uma vaga em rascunho");
+    if (v.getStatus() != Status.RASCUNHO)
+      throw Falha.invalida("A edição exige uma vaga em rascunho");
     preencher(v, d);
     return mapper.resumo(v);
   }
@@ -60,7 +61,8 @@ public class VagasApi {
   @PatchMapping("/vagas/{id}/status")
   public VagaMapper.Resumo status(@PathVariable UUID id, @RequestBody @Valid Mudanca d) {
     var v = paraEdicao(id);
-    if (d.status == Status.RASCUNHO || (v.status == Status.ENCERRADA && d.status != v.status))
+    if (d.status == Status.RASCUNHO
+        || (v.getStatus() == Status.ENCERRADA && d.status != v.getStatus()))
       throw Falha.invalida("Mudança de status não permitida");
     v.status = d.status;
     v.atualizadaEm = Instant.now();
@@ -71,8 +73,8 @@ public class VagasApi {
   public VagaMapper.Resumo obter(@PathVariable UUID id) {
     var v = banco.obter(Vaga.class, id);
     var u = ator.opcional();
-    if (u != null && u.papel() == Papel.RECRUTADOR) ator.empresa(v.empresaId);
-    else if (v.status != Status.PUBLICADA && (u == null || u.papel() != Papel.ADMIN))
+    if (u != null && u.getPapel() == Papel.RECRUTADOR) ator.empresa(v.getEmpresaId());
+    else if (v.getStatus() != Status.PUBLICADA && (u == null || u.getPapel() != Papel.ADMIN))
       throw Falha.ausente();
     return mapper.resumo(v);
   }
@@ -110,7 +112,7 @@ public class VagasApi {
   private Vaga paraEdicao(UUID id) {
     ator.exigir(Papel.RECRUTADOR);
     var v = banco.bloquear(Vaga.class, id);
-    ator.empresa(v.empresaId);
+    ator.empresa(v.getEmpresaId());
     return v;
   }
 

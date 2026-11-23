@@ -52,21 +52,13 @@ public class Erros {
                           "mensagem",
                           Objects.toString(f.getDefaultMessage(), "inválido")))
               .toList());
-    p.setProperty("correlationId", req.getAttribute("correlationId"));
+    Object id = req.getAttribute("correlationId");
+    p.setProperty("correlationId", id);
     if (status >= 500) {
-      // Mensagens de exceção podem conter valores de entrada ou dados do banco.
-      LOG.error(
-          "correlationId={} status={} tipo={} pilha={}",
-          req.getAttribute("correlationId"),
-          status,
-          ex.getClass().getName(),
-          Arrays.toString(ex.getStackTrace()));
-    } else
-      LOG.warn(
-          "correlationId={} status={} tipo={}",
-          req.getAttribute("correlationId"),
-          status,
-          ex.getClass().getSimpleName());
+      LOG.error("correlationId={} status={} tipo={}", id, status, ex.getClass().getName(), ex);
+    } else {
+      LOG.warn("correlationId={} status={} tipo={}", id, status, ex.getClass().getSimpleName());
+    }
     return p;
   }
 

@@ -23,7 +23,7 @@ public class Ator {
   public Usuario exigir(Papel... papeis) {
     Usuario u = opcional();
     if (u == null) throw Falha.credencial();
-    for (Papel papel : papeis) if (u.papel() == papel) return u;
+    for (Papel papel : papeis) if (u.getPapel() == papel) return u;
     throw Falha.negado();
   }
 
@@ -32,7 +32,7 @@ public class Ator {
     if (banco
         .em
         .createNativeQuery("select 1 from recrutador_empresa where usuario_id=:u and empresa_id=:e")
-        .setParameter("u", recrutador.id())
+        .setParameter("u", recrutador.getId())
         .setParameter("e", id)
         .getResultList()
         .isEmpty()) throw Falha.negado();

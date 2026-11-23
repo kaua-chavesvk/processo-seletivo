@@ -15,4 +15,24 @@ public class Empresa {
   String cnpj;
   String site;
   Instant criadaEm;
+
+  public UUID getId() {
+    return id;
+  }
+
+  public String getNome() {
+    return nome;
+  }
+
+  public String getCnpj() {
+    return cnpj;
+  }
+
+  public String getSite() {
+    return site;
+  }
+
+  public Instant getCriadaEm() {
+    return criadaEm;
+  }
 }

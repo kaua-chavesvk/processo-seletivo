@@ -1,0 +1,16 @@
+[
+  {
+    "id": "GHSA-j9f9-w8pj-32f8",
+    "coordenada": "org.springframework:spring-webmvc:6.2.19",
+    "motivo": "A API não transmite fragmentos de views por SSE. Reavaliar ao mudar a renderização ou a versão do Spring.",
+    "responsavel": "Manutenção do repositório processo-seletivo",
+    "expira_em": "2027-01-22"
+  },
+  {
+    "id": "GHSA-pc63-qcmh-9cmg",
+    "coordenada": "org.springframework:spring-webmvc:6.2.19",
+    "motivo": "A API não usa XsltView. Reavaliar ao introduzir renderização XSLT ou atualizar o Spring.",
+    "responsavel": "Manutenção do repositório processo-seletivo",
+    "expira_em": "2027-01-22"
+  }
+]

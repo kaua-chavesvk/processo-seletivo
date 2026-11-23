@@ -12,7 +12,7 @@ python scripts/demonstrar.py
 
 Em sistemas que disponibilizam o interpretador como `python3`, use `python3 scripts/demonstrar.py`. A primeira execução baixa as imagens e compila a API. O roteiro cria uma empresa e um recrutador, publica uma vaga, inscreve um candidato com um PDF fictício e avança a candidatura para entrevista. Pelo HTTP, confere também a recusa da inscrição duplicada, o conteúdo do PDF baixado e o histórico das etapas.
 
-A demonstração usa credenciais temporárias, volumes próprios e uma porta local livre. Ao terminar, remove os recursos desse projeto temporário e informa o resultado no terminal. O mesmo roteiro roda no GitHub Actions. Para explorar a API interativamente com dados persistentes, siga a seção abaixo.
+A demonstração usa credenciais temporárias, volumes próprios e uma porta local livre. Ao terminar, remove os recursos desse projeto temporário e informa o resultado no terminal. Use `python scripts/demonstrar.py --manter-imagem` para preservar a imagem da API identificada ao final. O mesmo roteiro, com remoção da imagem, roda no GitHub Actions. Para explorar a API interativamente com dados persistentes, siga a seção abaixo.
 
 ## Executar localmente
 
@@ -46,12 +46,13 @@ A busca pública aceita modalidade, nível, tecnologia e localização. A págin
 | --- | --- |
 | JWT_SECRET | Chave Base64 de pelo menos 32 bytes. Se omitida, a API gera uma chave temporária e os access tokens expiram ao reiniciar. |
 | POSTGRES_PASSWORD | Senha do banco. O Compose fornece um valor local padrão. |
-| API_PORT | Porta de loopback publicada pelo Compose. O padrão é 8080. A demonstração usa 0 para o Docker escolher uma porta livre. |
+| API_PORT | Porta de loopback publicada pelo Compose. O padrão é 8080. O script de demonstração seleciona uma porta livre no host e confirma a porta publicada. |
+| APP_ACCESS_TTL | Duração do access token, padrão `15m`. Corresponde a `app.access-ttl` e aceita durações como `30m`. |
 | DATABASE_URL / POSTGRES_USER | Conexão JDBC e usuário ao executar fora do Compose. |
 | UPLOADS_DIR | Diretório de PDFs, por padrão ./uploads. |
 | ADMIN_EMAIL / ADMIN_PASSWORD | Criação opcional do primeiro administrador. |
 
-O access token dura 15 minutos. O refresh token dura 30 dias, é armazenado como hash e pode ser usado uma única vez para renovação. Logout recebe `{"refreshToken":"<valor>"}`. A desativação em `PATCH /usuarios/{id}/atividade` revoga os refresh tokens e impede o uso de access tokens do usuário.
+O access token dura 15 minutos por padrão. O refresh token dura 30 dias, é armazenado como hash e pode ser usado uma única vez para renovação. Logout recebe `{"refreshToken":"<valor>"}`. A desativação em `PATCH /usuarios/{id}/atividade` revoga os refresh tokens e impede o uso de access tokens do usuário.
 
 ## Testar
 
@@ -71,7 +72,7 @@ O Compose utiliza `GET /actuator/health` para verificar a disponibilidade. O end
 
 ### Migrar o banco de produção
 
-No ambiente com o Flyway CLI e suporte a PostgreSQL, injete `FLYWAY_URL`, `FLYWAY_USER` e `FLYWAY_PASSWORD` da conta de migração. Configure a URL JDBC com `sslmode=verify-full` e `sslrootcert` apontando para a CA montada. Na raiz deste projeto, execute antes da implantação:
+Fixe a versão do Flyway CLI no processo de implantação e valide-a em homologação. Os testes deste repositório executam o Flyway integrado ao Spring Boot. No ambiente com o CLI e suporte a PostgreSQL, injete `FLYWAY_URL`, `FLYWAY_USER` e `FLYWAY_PASSWORD` da conta de migração. Configure a URL JDBC com `sslmode=verify-full` e `sslrootcert` apontando para a CA montada. Na raiz deste projeto, execute antes da implantação:
 
 ```sh
 flyway -locations=filesystem:src/main/resources/db/migration migrate

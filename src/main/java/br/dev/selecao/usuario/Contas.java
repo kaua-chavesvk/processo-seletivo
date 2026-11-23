@@ -42,7 +42,7 @@ public class Contas {
       banco
           .em
           .createNativeQuery("insert into recrutador_empresa(usuario_id,empresa_id) values (:u,:e)")
-          .setParameter("u", u.id)
+          .setParameter("u", u.getId())
           .setParameter("e", empresa)
           .executeUpdate();
     return u;

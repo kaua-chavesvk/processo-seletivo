@@ -24,7 +24,7 @@ public class EmpresasApi {
 
   public record Resumo(UUID id, String nome, String cnpj, String site, Instant criadaEm) {
     static Resumo de(Empresa e) {
-      return new Resumo(e.id, e.nome, e.cnpj, e.site, e.criadaEm);
+      return new Resumo(e.getId(), e.getNome(), e.getCnpj(), e.getSite(), e.getCriadaEm());
     }
   }
 

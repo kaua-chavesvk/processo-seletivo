@@ -17,6 +17,54 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 class ProtecoesTest {
   @Test
+  void producaoExigeCaAntesDeInicializarDataSource() {
+    var env = new MockEnvironment();
+    var validacao = Producao.exigirCaPostgres(env);
+    var fabrica = new org.springframework.beans.factory.support.DefaultListableBeanFactory();
+    assertThatThrownBy(() -> validacao.postProcessBeanFactory(fabrica))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("POSTGRES_SSL_ROOT_CERT");
+    env.setProperty("POSTGRES_SSL_ROOT_CERT", "   ");
+    assertThatThrownBy(() -> validacao.postProcessBeanFactory(fabrica))
+        .hasMessageContaining("POSTGRES_SSL_ROOT_CERT");
+    env.setProperty("POSTGRES_SSL_ROOT_CERT", "/etc/ssl/db-ca.pem");
+    assertThatCode(() -> validacao.postProcessBeanFactory(fabrica)).doesNotThrowAnyException();
+  }
+
+  private LimiteRequisicoes ocuparMapa() {
+    var limite = new LimiteRequisicoes();
+    for (int i = 0; i < 16384; i++) assertThat(limite.permitir("ip-" + i, false, 0)).isTrue();
+    return limite;
+  }
+
+  @Test
+  void capacidadeCheiaRecusaEnderecoNovo() {
+    var limite = ocuparMapa();
+    assertThat(limite.permitir("novo", false, 1)).isFalse();
+    assertThat(limite.permitir("ip-1", false, 1)).isTrue();
+  }
+
+  @Test
+  void reaproveitaEntradaOciosaSemZerarAsRecentes() {
+    var limite = ocuparMapa();
+    long minuto = TimeUnit.MINUTES.toNanos(1);
+    for (int i = 0; i < 20; i++) assertThat(limite.permitir("ip-0", true, minuto - 1)).isTrue();
+    assertThat(limite.permitir("novo", true, minuto)).isTrue();
+    assertThat(limite.permitir("ip-0", true, minuto)).isFalse();
+  }
+
+  @Test
+  void umMinutoRepoeCapacidadesExatas() {
+    var limite = new LimiteRequisicoes();
+    for (long instante : new long[] {0, TimeUnit.MINUTES.toNanos(1)}) {
+      for (int i = 0; i < 20; i++) assertThat(limite.permitir("a", true, instante)).isTrue();
+      assertThat(limite.permitir("a", true, instante)).isFalse();
+      for (int i = 20; i < 180; i++) assertThat(limite.permitir("a", false, instante)).isTrue();
+      assertThat(limite.permitir("a", false, instante)).isFalse();
+    }
+  }
+
+  @Test
   void verificaSenhaMesmoParaContaAusenteOuInativa() {
     var encoder = mock(PasswordEncoder.class);
     var usuarios = mock(UsuarioRepo.class);
@@ -30,8 +78,8 @@ class ProtecoesTest {
     verify(encoder).matches(dados.senha(), "hash-ficticio");
 
     var inativo = mock(Usuario.class);
-    when(inativo.ativo()).thenReturn(false);
-    when(inativo.senhaHash()).thenReturn("hash-da-conta");
+    when(inativo.isAtivo()).thenReturn(false);
+    when(inativo.getSenhaHash()).thenReturn("hash-da-conta");
     when(usuarios.bloquearPorEmail(dados.email())).thenReturn(Optional.of(inativo));
     when(encoder.matches(dados.senha(), "hash-da-conta")).thenReturn(true);
     assertThatThrownBy(() -> auth.login(dados)).isInstanceOf(Falha.class);
