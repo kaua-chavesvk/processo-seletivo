@@ -31,6 +31,21 @@ class ProtecoesTest {
     assertThatCode(() -> validacao.postProcessBeanFactory(fabrica)).doesNotThrowAnyException();
   }
 
+  @Test
+  void identificaClienteSomenteAtrasDoProxyConfigurado() {
+    var rede = new EnderecoCliente("192.0.2.1");
+    var pedido = new org.springframework.mock.web.MockHttpServletRequest();
+    pedido.setRemoteAddr("192.0.2.2");
+    pedido.addHeader("X-Real-IP", "198.51.100.8");
+    assertThat(rede.identificar(pedido)).isEqualTo("192.0.2.2");
+    pedido.setRemoteAddr("192.0.2.1");
+    assertThat(rede.identificar(pedido)).isEqualTo("198.51.100.8");
+    pedido.addHeader("X-Real-IP", "198.51.100.9");
+    assertThat(rede.identificar(pedido)).isEqualTo("192.0.2.1");
+    assertThatThrownBy(() -> new EnderecoCliente("localhost"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
   private LimiteRequisicoes ocuparMapa() {
     var limite = new LimiteRequisicoes();
     for (int i = 0; i < 16384; i++) assertThat(limite.permitir("ip-" + i, false, 0)).isTrue();

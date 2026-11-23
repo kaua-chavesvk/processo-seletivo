@@ -16,7 +16,10 @@ final class FiltroSeguranca extends OncePerRequestFilter {
   private final Tokens tokens;
   private final UsuarioRepo usuarios;
 
-  FiltroSeguranca(Tokens tokens, UsuarioRepo usuarios) {
+  private final EnderecoCliente endereco;
+
+  FiltroSeguranca(Tokens tokens, UsuarioRepo usuarios, EnderecoCliente endereco) {
+    this.endereco = endereco;
     this.tokens = tokens;
     this.usuarios = usuarios;
   }
@@ -34,7 +37,7 @@ final class FiltroSeguranca extends OncePerRequestFilter {
       Seguranca.falha(res, id, 403, "Origem não permitida");
       return;
     }
-    if (!limite.permitir(req.getRemoteAddr(), rota.startsWith("/auth/"), System.nanoTime())) {
+    if (!limite.permitir(endereco.identificar(req), rota.startsWith("/auth/"), System.nanoTime())) {
       res.setHeader("Retry-After", "60");
       Seguranca.falha(res, id, 429, "Limite de requisições atingido");
       return;

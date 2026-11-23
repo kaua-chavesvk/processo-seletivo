@@ -11,4 +11,9 @@ public interface UsuarioRepo extends JpaRepository<Usuario, UUID> {
       @org.springframework.data.repository.query.Param("email") String email);
 
   Optional<Usuario> findByEmailIgnoreCase(String email);
+
+  @org.springframework.data.jpa.repository.Query(
+      value = "select empresa_id from recrutador_empresa where usuario_id=:id",
+      nativeQuery = true)
+  Optional<UUID> empresaDoRecrutador(UUID id);
 }

@@ -253,6 +253,13 @@ class FluxoTest {
     chamar(get("/vagas?sort=empresaId"), null, null, 400);
     String id = verificarInscricoesConcorrentes(vaga, candidato);
     chamar(put(v), recrutador, dados, 422);
+    String painel = "/painel/vagas/" + vaga + "/candidaturas";
+    chamar(get(painel), externo, null, 403);
+    chamar(get(painel), candidato, null, 403);
+    chamar(get("/painel/minhas"), recrutador, null, 403);
+    assertThat(chamar(get("/painel/minhas"), outro, null, 200).path("content").size()).isZero();
+    assertThat(chamar(get(painel), recrutador, null, 200).at("/content/0/id").asText())
+        .isEqualTo(id);
     verificarAcessoEFunil(id, candidato, outro, recrutador, externo);
     chamar(patch(v + "/status"), recrutador, Map.of("status", "ENCERRADA"), 200);
     chamar(upload(vaga, "%PDF-1.7"), outro, null, 422);

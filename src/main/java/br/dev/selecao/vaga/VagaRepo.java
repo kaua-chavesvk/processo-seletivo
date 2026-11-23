@@ -1,5 +1,9 @@
 package br.dev.selecao.vaga;
 
-import org.springframework.data.jpa.repository.*;
 import java.util.UUID;
-public interface VagaRepo extends JpaRepository<Vaga,UUID>, JpaSpecificationExecutor<Vaga> {}
+import org.springframework.data.jpa.repository.*;
+
+public interface VagaRepo extends JpaRepository<Vaga, UUID>, JpaSpecificationExecutor<Vaga> {
+  org.springframework.data.domain.Page<Vaga> findByEmpresaId(
+      UUID empresaId, org.springframework.data.domain.Pageable pagina);
+}

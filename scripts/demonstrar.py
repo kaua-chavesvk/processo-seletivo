@@ -89,6 +89,13 @@ def demonstrar(api, email_admin, senha_admin):
     candidatura = api.chamar("POST", inscricoes, token=token, pdf=arquivo, status=201)
     api.chamar("POST", inscricoes, token=token, pdf=arquivo, status=409)
     caminho = f"/candidaturas/{candidatura['id']}"
+    perfil = api.chamar("GET", "/painel/perfil", token=recrutador_token)
+    vagas = api.chamar("GET", "/painel/vagas", token=recrutador_token)["content"]
+    cartoes = api.chamar("GET", "/painel" + inscricoes, token=recrutador_token)["content"]
+    minhas = api.chamar("GET", "/painel/minhas", token=token)["content"]
+    if (perfil["papel"] != "RECRUTADOR" or vagas[0]["id"] != vaga["id"]
+            or cartoes[0]["nome"] != "Candidato fictício" or minhas[0]["titulo"] != vaga["titulo"]):
+        raise RuntimeError("As visões do painel divergem do processo cadastrado")
     recebido = api.chamar("GET", caminho + "/curriculo", token=recrutador_token)
     if recebido != arquivo:
         raise RuntimeError("O PDF baixado difere do enviado")
@@ -100,6 +107,10 @@ def demonstrar(api, email_admin, senha_admin):
     if etapas != ["TRIAGEM", "ENTREVISTA"] or historico[0]["alteradoPor"] != candidato["id"]:
         raise RuntimeError("O histórico recebido diverge das etapas executadas")
     print("Histórico consultado pelo candidato: " + " -> ".join(etapas), flush=True)
+    if os.environ.get("TESTAR_INTERFACE") == "true":
+        subprocess.run([("npm.cmd" if os.name == "nt" else "npm"), "test", "--", "integrado.spec.ts"],
+                       cwd=RAIZ / "frontend", check=True, env={**os.environ, "TEST_BASE_URL": api.base,
+                       "TEST_RECRUTADOR_EMAIL": recrutador["email"], "TEST_RECRUTADOR_SENHA": recrutador["senha"]})
 
 
 def escolher_porta():

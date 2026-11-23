@@ -26,9 +26,10 @@ public class Seguranca {
   }
 
   @Bean
-  SecurityFilterChain filtros(HttpSecurity http, Tokens tokens, UsuarioRepo usuarios)
+  SecurityFilterChain filtros(
+      HttpSecurity http, Tokens tokens, UsuarioRepo usuarios, EnderecoCliente endereco)
       throws Exception {
-    var filtro = new FiltroSeguranca(tokens, usuarios);
+    var filtro = new FiltroSeguranca(tokens, usuarios, endereco);
     return http.csrf(c -> c.disable())
         .requestCache(c -> c.disable())
         .logout(c -> c.disable())
@@ -57,7 +58,13 @@ public class Seguranca {
                         "/v3/api-docs/**",
                         "/error")
                     .permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/vagas", "/vagas/*")
+                    .requestMatchers(
+                        org.springframework.http.HttpMethod.GET,
+                        "/",
+                        "/index.html",
+                        "/assets/**",
+                        "/vagas",
+                        "/vagas/*")
                     .permitAll()
                     .requestMatchers("/usuarios/me")
                     .hasRole("CANDIDATO")
