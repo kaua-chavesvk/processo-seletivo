@@ -1,6 +1,6 @@
 # Operar a plataforma de processo seletivo
 
-API REST em Java 21 e Spring Boot 3.5 para publicar vagas, receber currículos em PDF e acompanhar candidaturas. PostgreSQL 16 mantém o funil e seu histórico. Migrações Flyway criam as tabelas e o Hibernate valida o schema ao iniciar.
+API REST em Java 21 e Spring Boot 3.5 para publicar vagas, receber currículos em PDF e acompanhar candidaturas. No Compose, PostgreSQL 16 mantém o funil e seu histórico. Migrações Flyway criam as tabelas e o Hibernate valida o schema ao iniciar.
 
 ## Demonstração automática
 
@@ -28,7 +28,13 @@ Abra a [interface React](http://localhost:8080) ou o [Swagger UI](http://localho
 
 Para experimentar o fluxo administrativo, defina `ADMIN_EMAIL` e `ADMIN_PASSWORD` em um arquivo local `.env` antes da inicialização. Escolha uma senha com pelo menos oito caracteres. No primeiro início com essas variáveis, a aplicação cria a conta se o email estiver disponível. O cadastro público sempre cria um candidato.
 
-## Percorrer o primeiro processo
+## Operar pelos perfis da interface
+
+1. Entre como administrador e abra **Gerenciar empresas e recrutadores**. Crie a empresa com nome e CNPJ, depois use **Recrutador** para cadastrar a pessoa que vai publicar as vagas.
+2. Entre como recrutador, abra **Gerenciar vagas**, preencha a descrição e salve o rascunho. Na aba **Publicar**, selecione o rascunho e confirme. A vaga passa a aparecer na lista pública.
+3. Na área pública, abra a vaga, crie uma conta de candidato e envie o PDF. O recrutador pode baixá-lo e alterar a etapa pelo quadro. O candidato consulta **Minhas candidaturas** para ver a mudança.
+
+## Percorrer o primeiro processo pela API
 
 No Swagger UI, execute o login, clique em **Authorize** e cole apenas o valor de `accessToken`. A interface acrescenta o prefixo Bearer. Ao trocar de perfil, substitua o token nessa mesma janela.
 
@@ -89,3 +95,17 @@ O servidor valida e limita o PDF antes do upload, guarda uma chave UUID no Postg
 ## Publicar a interface de demonstração
 
 O diretório do projeto Vercel é `frontend/`. O arquivo `vercel.json` executa `npm run build:demo` e publica `dist/`. Para uma nova publicação manual no projeto vinculado, execute `vercel deploy --prod` a partir desse diretório. A demonstração usa dados fictícios na memória da aba. O Docker executa o build integrado e serve o React e a API Spring no mesmo endereço.
+
+## Operar a instalação hospedada
+
+O projeto Vercel da raiz serve a interface e a API Java no mesmo contêiner. O projeto em `frontend/` publica a demonstração independente. Na raiz, `vercel deploy --prod` publica a aplicação integrada. O hostname canônico deve coincidir com `APP_PUBLIC_HOST` para as verificações de origem feitas pelo Spring.
+
+Em produção, a Vercel termina o HTTPS no gateway. O conector HTTP interno representa a origem pública canônica e só usa o modo gerenciado com os perfis `prod,vercel`, `VERCEL=1` e `VERCEL_ENV=production`. O Java usa `PORT=8080` e até três conexões de banco por instância. Para distribuir as cotas entre visitantes, a aplicação considera o IP fornecido pelo gateway. A contagem continua separada por instância.
+
+O Neon Free e o Vercel Blob privado deste projeto ficam em São Paulo. A API usa `DATABASE_URL` JDBC direta, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_SSL_ROOT_CERT` e `JWT_SECRET`. A conexão exige `sslmode=verify-full`. O proxy Neon termina o TLS antes do processo PostgreSQL que responde a `pg_stat_ssl`. A aplicação valida o hostname Neon e a configuração de certificados nesse cenário. A conta de migração fica separada da conta restrita de execução.
+
+O perfil Vercel seleciona o armazenamento privado com `BLOB_STORE_ID` e `BLOB_READ_WRITE_TOKEN`. Cada currículo recebe um UUID. A API entrega o arquivo a quem passa pela verificação de acesso. O limite publicado é 4 MiB para acomodar o envelope multipart. O padrão local é 5 MiB. A interface lê o limite efetivo do servidor em `GET /interface/config`. [Limites das funções da Vercel](https://vercel.com/docs/functions/limitations) · [Armazenamento privado](https://vercel.com/docs/vercel-blob/private-storage)
+
+A conta administrativa inicial é provisionada uma vez. Depois da criação, retire as variáveis de bootstrap `ADMIN_EMAIL` e `ADMIN_PASSWORD` e publique novamente. A autenticação subsequente usa a conta registrada no banco.
+
+Os pushes executam a CI no GitHub Actions. A publicação na Vercel usa a CLI. Para ativar deploy por push, o proprietário precisa instalar a integração GitHub da Vercel e permitir acesso ao repositório `kaua-chavesvk/processo-seletivo`. Ao vincular os projetos, use a raiz do repositório para a aplicação e `frontend/` para a demonstração. [Integração oficial](https://vercel.com/docs/git/vercel-for-github)

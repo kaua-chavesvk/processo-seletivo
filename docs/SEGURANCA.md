@@ -72,3 +72,9 @@ As exceções de versão e aviso ficam em [scripts/excecoes-auditoria.json](../s
 - A publicação na Vercel usa dados fictícios em memória. A política de conteúdo restringe recursos à própria origem. As credenciais da aplicação integrada ficam na memória da aba. Nenhuma credencial do banco ou do bucket integra a configuração pública do Vite.
 - No histórico Git disponível até o commit `8d5c6c0`, a busca por assinaturas de chaves privadas e tokens de AWS, GitHub, OpenAI e Vercel examinou 208 blobs de texto e retornou zero ocorrências. O resultado cobre os formatos pesquisados.
 - A integração S3 usa o cliente HTTP da JDK. A primeira resolução do SDK também incluía o transporte Apache opcional. O OSV identificou três avisos nas dependências desse transporte, que foi excluído do runtime. As exceções já documentadas de Spring MVC continuam com a mesma expiração.
+
+## Verificação da instalação publicada em 23 de novembro
+
+A aplicação integrada foi verificada no endereço público da Vercel com dados exclusivamente fictícios. O teste criou dois perfis, publicou uma vaga temporária, enviou um PDF e comparou os bytes do download autenticado. Depois da mudança para entrevista, a conta candidata consultou o histórico em uma sessão independente do Chromium. A mesma conta recebeu HTTP 403 ao tentar baixar o currículo. Uma leitura direta do objeto privado sem credencial também recebeu HTTP 403. O PDF e os registros criados para esse teste foram removidos.
+
+O Neon aceitou a conexão JDBC com verificação completa do certificado e do hostname. A conta de execução não tem CREATE no schema nem UPDATE no histórico Flyway. Duas migrações foram aplicadas com a conta separada. O banco gerenciado informou PostgreSQL 18.7 e a versão do Flyway usada nessa migração indicou cobertura testada até PostgreSQL 17. A CI do projeto continua verificando PostgreSQL 16, a versão do Compose. Restauração de backup e entrega de alertas ao operador continuam fora desta verificação.

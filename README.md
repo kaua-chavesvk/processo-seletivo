@@ -1,47 +1,66 @@
-# Trilha · Plataforma de processo seletivo
+# Trilha · Processo seletivo
 
-[![Verificar plataforma](https://github.com/kaua-chavesvk/processo-seletivo/actions/workflows/ci.yml/badge.svg)](https://github.com/kaua-chavesvk/processo-seletivo/actions/workflows/ci.yml) · [English](README.en.md)
+[![Verificação da plataforma](https://github.com/kaua-chavesvk/processo-seletivo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kaua-chavesvk/processo-seletivo/actions/workflows/ci.yml) · [English](README.en.md)
 
-O recrutador acompanha as pessoas em um quadro por vaga. O candidato se inscreve com um currículo em PDF e consulta o histórico de cada etapa. A interface usa React e TypeScript, a API usa Java 21 e Spring Boot e os dados ficam no PostgreSQL.
+Uma candidatura começa com um PDF e passa por várias pessoas. O Trilha dá ao recrutador um quadro por vaga e ao candidato um histórico das decisões sobre sua inscrição. Mover um cartão para **Entrevista** atualiza as duas visões do mesmo processo.
 
-**[Experimentar a demonstração na Vercel](https://trilha-processo-seletivo.vercel.app)**
+**[Experimentar o funil sem cadastro](https://trilha-processo-seletivo.vercel.app)** · **[Abrir a aplicação com login](https://trilha-selecao-app.vercel.app)** · [Assistir ao vídeo do fluxo](docs/demonstracao.webm)
 
-Abra o cartão de Marina Costa e avance para entrevista. Em **Minhas candidaturas**, confira a mesma mudança pela perspectiva da candidata. A demonstração usa dados fictícios em memória e reinicia quando você recarrega a página. Para experimentar autenticação e arquivos reais, execute a aplicação com Docker.
+![Quadro de recrutamento do Trilha para Product Designer, com candidaturas em triagem, entrevista, teste técnico e proposta](docs/funil.png)
 
-[Assistir ao fluxo do recrutador e da candidata](docs/demonstracao.webm)
+## Um minuto no projeto
 
-![Funil da vaga Product Designer com candidaturas em quatro etapas](docs/funil.png)
+1. Na demonstração, abra **Marina Costa** em **Triagem**, escolha **Entrevista** e clique em **Salvar etapa**. Também é possível arrastar o cartão no quadro.
+2. Abra **Minhas candidaturas**, selecione **Product Designer** e confira a nova etapa no histórico da Marina.
+3. Em **Vagas abertas**, escolha **Analista de Dados** e simule uma inscrição. Recarregar a página restaura os dados fictícios.
 
-## Executar com Docker
+A aplicação com login usa o PostgreSQL e o armazenamento privado de PDFs. A lista pública reflete as vagas que um recrutador publicou. As inscrições e os arquivos enviados por esse endereço persistem entre sessões.
+
+## O que acontece quando uma etapa muda
+
+O React envia a nova etapa para a API. O serviço identifica o recrutador, verifica a empresa da vaga e bloqueia a linha da candidatura no PostgreSQL. Uma máquina de estados em Java decide se a transição é válida. A atualização e o registro do histórico compartilham a mesma transação. Assim, duas pessoas trabalhando no mesmo cartão não conseguem registrar etapas incompatíveis.
+
+| Decisão | Efeito no produto |
+| --- | --- |
+| Autorização por perfil e empresa | O administrador vincula recrutadores a empresas. Cada recrutador publica e acompanha as vagas da sua empresa. Cada candidato consulta as próprias inscrições. |
+| Tokens mantidos na memória da aba | A autenticação é renovada enquanto a aba está aberta. Recarregar exige um novo login. A API e a interface usam a mesma origem. |
+| Currículo entregue pela API | O recrutador só recebe o PDF depois da verificação de acesso. Na versão publicada, o envio aceita até 4 MiB e o Blob é privado. |
+| Demonstração independente | Quem avalia o portfólio pode mudar etapas e simular inscrições sem compartilhar dados pessoais ou alterar o banco da aplicação. |
+
+<details>
+<summary>Ver o histórico de uma candidatura na aplicação publicada</summary>
+
+A captura veio de um teste com duas contas fictícias, um PDF de exemplo e uma mudança de etapa na API publicada.
+
+![Histórico de uma candidatura de teste com as etapas Triagem e Entrevista](docs/historico.png)
+
+</details>
+
+## Arquitetura publicada
+
+```mermaid
+flowchart LR
+  B[Navegador] -->|HTTPS| G[Vercel]
+  G --> S[Contêiner Spring Boot · Java 21]
+  S --> R[Interface React · TypeScript]
+  S -->|TLS| P[(PostgreSQL no Neon)]
+  S --> V[Currículos no Vercel Blob privado]
+```
+
+Vite compila a interface, TanStack Query consulta a API e o Flyway aplica as migrações com uma conta separada da conta de execução. No Docker local, os currículos ficam em volume. A API também oferece um adaptador para buckets compatíveis com S3. [Guia de operação](docs/operacao.md)
+
+## Executar e verificar
 
 ```sh
 docker compose up --build -d
 ```
 
-Abra a [interface local](http://localhost:8080) ou o [Swagger](http://localhost:8080/swagger-ui.html). Uma instalação nova começa com a lista de vagas vazia. O guia de operação mostra como criar o primeiro administrador, vincular um recrutador à empresa e publicar uma vaga. [Guia de operação](docs/operacao.md)
+Abra a [interface local](http://localhost:8080). Para cadastrar a primeira empresa e publicar uma vaga, siga o [guia de operação](docs/operacao.md). Para percorrer o processo em uma instalação Docker descartável, execute `python scripts/demonstrar.py`.
 
-## Arquitetura e decisões
+A CI testa o domínio e a autorização com JUnit e PostgreSQL via Testcontainers. O Playwright exercita o quadro em desktop, a candidatura em tela pequena e a passagem de uma candidatura entre duas sessões de navegador. O relatório de segurança documenta os controles, seus limites e os dois avisos de Spring MVC acompanhados pelo projeto. [Execuções da CI](https://github.com/kaua-chavesvk/processo-seletivo/actions/workflows/ci.yml) · [Relatório de segurança](docs/SEGURANCA.md)
 
-```mermaid
-flowchart LR
-  B[Navegador] -->|mesma origem| S[Spring Boot]
-  S --> UI[React compilado]
-  S --> A[API de candidaturas]
-  A --> P[(PostgreSQL)]
-  A --> V[(Volume privado de PDFs)]
-```
+## Código para explorar
 
-- **Sessão no navegador.** Access e refresh tokens ficam na memória da aba. Recarregar a página exige novo login. A API valida perfil e empresa em cada operação. React recebe os dados pela mesma origem e o ambiente Vite local encaminha as rotas da API.
-- **Mudanças simultâneas.** O serviço bloqueia a candidatura ao alterar uma etapa e grava o histórico na mesma transação. A máquina de estados em Java também protege o fluxo quando outro cliente usa a API diretamente.
-- **Persistência.** Repositórios Spring Data concentram listagens, filtros e projeções do painel. O EntityManager compartilhado atende inserções e leituras com bloqueio explícito. No Compose, os volumes preservam banco e arquivos entre reinícios. Para um host com disco efêmero, a API pode usar um bucket privado compatível com S3. O download passa pela mesma autorização nos dois modos.
-- **Segurança.** A CI consulta o OSV e o npm. Dois avisos em Spring MVC têm exceções de versão com data de revisão. As condições descritas pelo fornecedor envolvem recursos de renderização que a aplicação atual não utiliza. [Relatório e limitações](docs/SEGURANCA.md)
-
-## Verificar os fluxos
-
-| Comando | O que verifica |
-| --- | --- |
-| `./mvnw verify` | Domínio, autorização, autenticação e transações com PostgreSQL via Testcontainers. No Windows, use `.\mvnw.cmd verify`. |
-| `python scripts/demonstrar.py` | Cria uma instalação Docker descartável, publica uma vaga, envia e baixa um PDF e confere o histórico por HTTP. |
-| `npm ci`, `npx playwright install chromium`, `npm test` em `frontend/` | Exercita o quadro, a busca e a candidatura fictícia em tela de celular. A CI também percorre os perfis reais em dois contextos de navegador. |
-
-Para trabalhar só na interface, rode `npm run dev:demo` em `frontend/`. Use `npm run dev` para trabalhar com a API local em execução. As configurações de ambiente, permissões do banco e migrações estão no [guia de operação](docs/operacao.md).
+- A máquina de estados e a transação de mudança de etapa estão em [Funil.java](src/main/java/br/dev/selecao/candidatura/Funil.java) e [CandidaturasService.java](src/main/java/br/dev/selecao/candidatura/CandidaturasService.java).
+- O quadro e as operações administrativas da interface estão em [Board.tsx](frontend/src/Board.tsx) e [Operacao.tsx](frontend/src/Operacao.tsx).
+- O teste que cruza as visões de candidato e recrutador está em [integrado.spec.ts](frontend/tests/integrado.spec.ts).
