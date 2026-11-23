@@ -37,12 +37,16 @@ public class PainelApi {
     this.mapper = mapper;
   }
 
-  public record Perfil(UUID id, String nome, Papel papel) {}
+  public record Perfil(UUID id, String nome, Papel papel, UUID empresaId) {}
 
   @GetMapping("/perfil")
   public Perfil perfil() {
     var usuario = ator.exigir(ADMIN, CANDIDATO, RECRUTADOR);
-    return new Perfil(usuario.getId(), usuario.getNome(), usuario.getPapel());
+    var empresa =
+        usuario.getPapel() == RECRUTADOR
+            ? usuarios.empresaDoRecrutador(usuario.getId()).orElseThrow(Falha::negado)
+            : null;
+    return new Perfil(usuario.getId(), usuario.getNome(), usuario.getPapel(), empresa);
   }
 
   @GetMapping("/vagas")

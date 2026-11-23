@@ -110,6 +110,7 @@ def demonstrar(api, email_admin, senha_admin):
     if os.environ.get("TESTAR_INTERFACE") == "true":
         subprocess.run([("npm.cmd" if os.name == "nt" else "npm"), "test", "--", "integrado.spec.ts"],
                        cwd=RAIZ / "frontend", check=True, env={**os.environ, "TEST_BASE_URL": api.base,
+                       "TEST_ADMIN_EMAIL": email_admin, "TEST_ADMIN_SENHA": senha_admin,
                        "TEST_RECRUTADOR_EMAIL": recrutador["email"], "TEST_RECRUTADOR_SENHA": recrutador["senha"]})
 
 

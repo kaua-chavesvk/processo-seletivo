@@ -44,6 +44,7 @@ export type Event = {
   observacao?: string;
 };
 export type Profile = {
+  empresaId?: string | null;
   id: string;
   nome: string;
   papel: "RECRUTADOR" | "CANDIDATO" | "ADMIN";

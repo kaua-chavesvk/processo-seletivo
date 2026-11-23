@@ -33,7 +33,13 @@ final class FiltroSeguranca extends OncePerRequestFilter {
     res.setHeader("X-Correlation-ID", id);
     String rota = req.getServletPath();
     if (rota.isEmpty()) rota = req.getRequestURI().substring(req.getContextPath().length());
-    if (CorsUtils.isCorsRequest(req) || "cross-site".equals(req.getHeader("Sec-Fetch-Site"))) {
+    boolean abrirInicio =
+        "/".equals(rota)
+            && "GET".equals(req.getMethod())
+            && "navigate".equals(req.getHeader("Sec-Fetch-Mode"))
+            && "document".equals(req.getHeader("Sec-Fetch-Dest"));
+    if (CorsUtils.isCorsRequest(req)
+        || (!abrirInicio && "cross-site".equals(req.getHeader("Sec-Fetch-Site")))) {
       Seguranca.falha(res, id, 403, "Origem não permitida");
       return;
     }

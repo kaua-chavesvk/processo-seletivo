@@ -147,12 +147,18 @@ export function Auth({ done }: { done: (p: Profile) => void }) {
 }
 export function JobDetails({
   job,
+  limitePdf,
+  erroConfig,
+  recarregar,
   canApply,
   guest,
   enter,
   done,
 }: {
   job: Job;
+  limitePdf?: number;
+  erroConfig: boolean;
+  recarregar: () => void;
   canApply: boolean;
   guest: boolean;
   enter: () => void;
@@ -171,10 +177,11 @@ export function JobDetails({
         if (
           !file ||
           file.size === 0 ||
-          file.size > 5 * 1024 * 1024 ||
+          !limitePdf ||
+          file.size > limitePdf ||
           file.type !== "application/pdf"
         )
-          throw new Error("Selecione um PDF de até 5 MB.");
+          throw new Error("Selecione um PDF dentro do limite indicado.");
         const data = new FormData();
         data.append("curriculo", file);
         await request("/vagas/" + job.id + "/candidaturas", {
@@ -216,7 +223,12 @@ export function JobDetails({
             </p>
           ) : (
             <label>
-              Currículo em PDF · até 5 MB
+              Currículo em PDF{" "}
+              {limitePdf
+                ? "· até " +
+                  (limitePdf / 1048576).toLocaleString("pt-BR") +
+                  " MB"
+                : ""}
               <input
                 type="file"
                 accept="application/pdf,.pdf"
@@ -226,7 +238,15 @@ export function JobDetails({
             </label>
           )}
           {error && <p role="alert">{error}</p>}
-          <button className="primary" disabled={busy}>
+          {erroConfig && (
+            <p role="alert">
+              Falha ao carregar o limite de envio.{" "}
+              <button type="button" onClick={recarregar}>
+                Tentar novamente
+              </button>
+            </p>
+          )}
+          <button className="primary" disabled={busy || (!demo && !limitePdf)}>
             {demo ? "Simular candidatura" : "Enviar candidatura"}
             <ArrowRight size={16} />
           </button>

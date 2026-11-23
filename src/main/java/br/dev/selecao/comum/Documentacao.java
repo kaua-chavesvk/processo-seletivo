@@ -27,7 +27,7 @@ public class Documentacao {
     OpenApiCustomizer acessoDasRotas() {
         return api -> api.getPaths().forEach((rota, item) ->
             item.readOperationsMap().forEach((metodo, operacao) -> {
-                if (rota.startsWith("/auth/")) return;
+                if (rota.startsWith("/auth/") || rota.equals("/interface/config")) return;
                 boolean vagaPublica = metodo == PathItem.HttpMethod.GET
                     && (rota.equals("/vagas") || rota.equals("/vagas/{id}"));
                 if (vagaPublica) operacao.addSecurityItem(new SecurityRequirement());

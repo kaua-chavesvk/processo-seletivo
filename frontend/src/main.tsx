@@ -36,7 +36,8 @@ import {
   type Stage,
 } from "./model";
 import { jobs as exampleJobs, sample } from "./demo";
-import { json, list, logout, request } from "./api";
+import { json, list, logout, read, request } from "./api";
+import { Operacao } from "./Operacao";
 import { Avatar, Board } from "./Board";
 import { Auth, Details, Dialog, JobDetails } from "./Dialogs";
 
@@ -60,6 +61,7 @@ function App() {
     [mobile, setMobile] = useState(false),
     [notice, setNotice] = useState(""),
     [revision, revise] = useState(0);
+  const [gerenciar, setGerenciar] = useState(false);
   const afterLogin = useRef<Job | null>(null);
   const recruiter = demo || profile?.papel === "RECRUTADOR",
     candidate = demo || profile?.papel === "CANDIDATO";
@@ -83,6 +85,7 @@ function App() {
       setNotice("");
     };
     const expired = () => {
+      setGerenciar(false);
       setProfile(null);
       setOpen({ type: "auth" });
       client.clear();
@@ -95,6 +98,13 @@ function App() {
       window.removeEventListener("session-expired", expired);
     };
   }, []);
+  const recursos = useQuery({
+    queryKey: ["recursos"],
+    enabled: !demo,
+    staleTime: Infinity,
+    queryFn: () =>
+      read<{ limitePdf: number; swagger: boolean }>("/interface/config"),
+  });
   const jobs = useQuery({
     queryKey: ["jobs", view === "funil", profile?.id],
     queryFn: () =>
@@ -153,6 +163,7 @@ function App() {
         "Sessão local encerrada. A revogação no servidor não foi confirmada.";
     } finally {
       client.clear();
+      setGerenciar(false);
       setProfile(null);
       setOpen(null);
       choose("");
@@ -282,6 +293,15 @@ function App() {
           )}
         </header>
         <main>
+          {!demo && profile && profile.papel !== "CANDIDATO" && (
+            <div className="acoes-painel">
+              <button className="secondary" onClick={() => setGerenciar(true)}>
+                {profile.papel === "ADMIN"
+                  ? "Gerenciar empresas e recrutadores"
+                  : "Gerenciar vagas"}
+              </button>
+            </div>
+          )}
           {notice && (
             <div className="notice" role="status">
               {notice}
@@ -366,7 +386,7 @@ function App() {
                       </button>
                     </article>
                   ))}
-                  {!jobs.data?.length && <p>Nenhuma vaga publicada.</p>}
+                  {!jobs.data?.length && <p>Nenhuma vaga publicada no momento. <a href="https://trilha-processo-seletivo.vercel.app">Explorar o funil com dados fictícios</a></p>}
                 </div>
               ) : view === "minhas" ? (
                 <div className="applications">
@@ -401,15 +421,32 @@ function App() {
               ) : (
                 <p>Nenhuma vaga cadastrada.</p>
               )}
-              {profile?.papel === "ADMIN" && view === "vagas" && (
-                <a href="/swagger-ui.html">
-                  Abrir operações administrativas na API
-                </a>
-              )}
+              {profile?.papel === "ADMIN" &&
+                recursos.data?.swagger &&
+                view === "vagas" && (
+                  <a href="/swagger-ui.html">
+                    Abrir operações administrativas na API
+                  </a>
+                )}
             </>
           )}
         </main>
       </div>
+      {gerenciar && profile && (
+        <Dialog
+          title={
+            profile.papel === "ADMIN"
+              ? "Empresas e recrutadores"
+              : "Gerenciar vagas"
+          }
+          close={() => setGerenciar(false)}
+        >
+          <Operacao
+            perfil={profile}
+            atualizar={() => client.invalidateQueries({ queryKey: ["jobs"] })}
+          />
+        </Dialog>
+      )}
       {opened && (
         <Dialog
           title={
@@ -429,6 +466,9 @@ function App() {
           ) : opened.type === "job" ? (
             <JobDetails
               job={opened.job}
+              limitePdf={recursos.data?.limitePdf}
+              erroConfig={recursos.isError}
+              recarregar={() => void recursos.refetch()}
               canApply={candidate}
               guest={!demo && !profile}
               enter={() => {

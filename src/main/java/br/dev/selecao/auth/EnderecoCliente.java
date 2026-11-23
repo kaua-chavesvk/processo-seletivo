@@ -29,8 +29,21 @@ final class EnderecoCliente {
             .collect(Collectors.toUnmodifiableSet());
   }
 
+  @org.springframework.beans.factory.annotation.Autowired
+  void configurarGateway(org.springframework.core.env.Environment ambiente) {
+    gatewayVercel = GatewayVercel.ativo(ambiente);
+  }
+
+  private boolean gatewayVercel;
+
   String identificar(HttpServletRequest request) {
     String remoto = request.getRemoteAddr();
+    if (gatewayVercel) {
+      var valores = request.getHeaders("X-Vercel-Forwarded-For");
+      if (!valores.hasMoreElements()) return remoto;
+      String ip = literal(valores.nextElement());
+      return ip != null && !valores.hasMoreElements() ? ip : remoto;
+    }
     if (proxies.isEmpty()) return remoto;
     String origem = literal(remoto);
     if (origem == null || !proxies.contains(origem)) return remoto;

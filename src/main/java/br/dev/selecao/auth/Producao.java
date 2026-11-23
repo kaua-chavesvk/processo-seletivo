@@ -27,7 +27,8 @@ public class Producao {
         throw new IllegalStateException("Configure uma senha exclusiva para o banco");
       if (Base64.getDecoder().decode(env.getRequiredProperty("app.jwt")).length < 32)
         throw new IllegalStateException("JWT_SECRET requer pelo menos 32 bytes");
-      if (!env.getProperty("server.ssl.enabled", Boolean.class, false)
+      if ((!env.getProperty("server.ssl.enabled", Boolean.class, false)
+              && !GatewayVercel.ativo(env))
           || env.getProperty("debug", Boolean.class, false)
           || env.getProperty("trace", Boolean.class, false))
         throw new IllegalStateException("O perfil prod exige TLS e debug/trace desligados");
@@ -45,8 +46,19 @@ from pg_roles where rolname=current_user
       Boolean tlsBanco =
           jdbc.queryForObject(
               "select ssl from pg_stat_ssl where pid=pg_backend_pid()", Boolean.class);
-      if (!Boolean.TRUE.equals(tlsBanco))
+      if (!Boolean.TRUE.equals(tlsBanco) && !conexaoNeonVerificada(env))
         throw new IllegalStateException("A conexão com o PostgreSQL de produção requer TLS");
     };
+  }
+
+  // O proxy do Neon termina o TLS antes do processo que fornece pg_stat_ssl.
+  static boolean conexaoNeonVerificada(Environment env) {
+    return GatewayVercel.ativo(env)
+        && env.getProperty("spring.datasource.url", "")
+            .matches("jdbc:postgresql://[a-zA-Z0-9.-]+\\.neon\\.tech(:5432)?/[a-zA-Z0-9_-]+")
+        && "verify-full"
+            .equals(env.getProperty("spring.datasource.hikari.data-source-properties.sslmode"))
+        && !env.getProperty("spring.datasource.hikari.data-source-properties.sslrootcert", "")
+            .isBlank();
   }
 }

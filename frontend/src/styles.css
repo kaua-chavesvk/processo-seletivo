@@ -994,3 +994,17 @@ p[role="alert"] {
     scroll-behavior: auto !important;
   }
 }
+
+.acoes-painel {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+.stack textarea {
+  font: inherit;
+  color: inherit;
+  resize: vertical;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}

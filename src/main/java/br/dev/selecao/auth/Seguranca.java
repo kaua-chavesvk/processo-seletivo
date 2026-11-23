@@ -63,6 +63,7 @@ public class Seguranca {
                         "/",
                         "/index.html",
                         "/assets/**",
+                        "/interface/config",
                         "/vagas",
                         "/vagas/*")
                     .permitAll()

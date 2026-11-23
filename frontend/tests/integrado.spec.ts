@@ -60,3 +60,86 @@ test("candidato e recrutador percorrem o mesmo processo na API Java", async ({
     await recruiter.close();
   }
 });
+
+test("administrador cria a equipe e o recrutador publica a primeira vaga pela interface", async ({
+  page,
+  browser,
+}) => {
+  test.skip(
+    !process.env.TEST_ADMIN_EMAIL,
+    "Requer a instalação descartável de scripts/demonstrar.py",
+  );
+  const email = randomUUID() + "@example.invalid",
+    senha = randomUUID(),
+    titulo = "Vaga de teste " + randomUUID().slice(0, 8);
+  async function entrar(aba: typeof page, email: string, senha: string) {
+    await aba.goto("/");
+    await aba.getByRole("button", { name: "Entrar", exact: true }).click();
+    await aba.getByLabel("E-mail", { exact: true }).fill(email);
+    await aba.getByLabel("Senha", { exact: true }).fill(senha);
+    await aba
+      .getByRole("dialog")
+      .getByRole("button", { name: "Entrar", exact: true })
+      .click();
+  }
+  await entrar(
+    page,
+    process.env.TEST_ADMIN_EMAIL!,
+    process.env.TEST_ADMIN_SENHA!,
+  );
+  await page
+    .getByRole("button", { name: "Gerenciar empresas e recrutadores" })
+    .click();
+  await page
+    .getByLabel("Nome da empresa")
+    .fill("Empresa do teste de interface");
+  await page.getByLabel("CNPJ").fill("04.252.011/0001-10");
+  await page.getByRole("button", { name: "Criar empresa" }).click();
+  await expect(page.getByRole("dialog").getByRole("status")).toContainText(
+    "Empresa criada",
+  );
+  await page.getByRole("button", { name: "Recrutador", exact: true }).click();
+  const empresa = page.getByRole("option", {
+    name: /Empresa do teste de interface/,
+  });
+  await page
+    .getByLabel("Empresa", { exact: true })
+    .selectOption((await empresa.getAttribute("value")) ?? "");
+  await page.getByLabel("Nome do recrutador").fill("Recrutador da interface");
+  await page.getByLabel("E-mail do recrutador").fill(email);
+  await page.getByLabel("Senha do recrutador").fill(senha);
+  await page.getByRole("button", { name: "Cadastrar recrutador" }).click();
+  await expect(page.getByRole("dialog").getByRole("status")).toContainText(
+    "Recrutador cadastrado",
+  );
+  const contexto = await browser.newContext({
+    baseURL: process.env.TEST_BASE_URL,
+  });
+  try {
+    const painel = await contexto.newPage();
+    await entrar(painel, email, senha);
+    await painel.getByRole("button", { name: "Gerenciar vagas" }).click();
+    await painel.getByLabel("Título da vaga").fill(titulo);
+    await painel
+      .getByLabel("Descrição")
+      .fill("Oportunidade fictícia do teste automático.");
+    await painel.getByLabel("Localização").fill("Brasil");
+    await painel.getByRole("button", { name: "Salvar rascunho" }).click();
+    await expect(painel.getByRole("dialog").getByRole("status")).toContainText(
+      "Rascunho salvo",
+    );
+    await painel.getByRole("button", { name: "Publicar", exact: true }).click();
+    await painel.getByLabel("Vaga em rascunho").selectOption({ label: titulo });
+    await painel
+      .getByRole("button", { name: "Publicar vaga", exact: true })
+      .click();
+    await expect(painel.getByRole("dialog").getByRole("status")).toContainText(
+      "Vaga publicada",
+    );
+    await painel.getByRole("button", { name: "Fechar", exact: true }).click();
+    await painel.getByRole("link", { name: "Vagas abertas" }).click();
+    await expect(painel.getByRole("heading", { name: titulo })).toBeVisible();
+  } finally {
+    await contexto.close();
+  }
+});
