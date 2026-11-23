@@ -12,10 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.web.servlet.MultipartProperties;
 import org.springframework.mock.web.MockMultipartFile;
 import software.amazon.awssdk.auth.credentials.*;
-import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
-import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
 
 class ArmazenamentoS3Test {
   @Test
@@ -57,11 +53,7 @@ class ArmazenamentoS3Test {
         });
     servidor.start();
     try (var cliente =
-        S3Client.builder()
-            .region(Region.US_EAST_1)
-            .httpClientBuilder(UrlConnectionHttpClient.builder())
-            .forcePathStyle(true)
-            .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+        ConfigS3.transporte("us-east-1", true)
             .endpointOverride(URI.create("http://127.0.0.1:" + servidor.getAddress().getPort()))
             .credentialsProvider(
                 StaticCredentialsProvider.create(AwsBasicCredentials.create("teste", "teste")))
