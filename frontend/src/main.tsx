@@ -19,6 +19,7 @@ import {
   LogOut,
   MapPin,
   Menu,
+  FolderOpen,
   PanelLeft,
   X,
 } from "lucide-react";
@@ -35,21 +36,37 @@ import {
   type Profile,
   type Stage,
 } from "./model";
-import { jobs as exampleJobs, sample } from "./demo";
-import { json, list, logout, read, readPublicJob, request } from "./api";
+import { sample } from "./demo";
+import {
+  isJobId,
+  json,
+  list,
+  logout,
+  read,
+  readPublicJob,
+  request,
+} from "./api";
 import { Operacao } from "./Operacao";
+import { MinhasVagas } from "./MinhasVagas";
 import { Avatar, Board } from "./Board";
-import { Auth, Details, Dialog, JobDetails } from "./Dialogs";
+import {
+  ApplicationStatus,
+  Auth,
+  Details,
+  Dialog,
+  JobDetails,
+} from "./Dialogs";
 
 const client = new QueryClient({
   defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } },
 });
-type View = "funil" | "vagas" | "minhas";
 const views = {
   funil: { title: "Funil de seleção", icon: Columns3 },
+  "minhas-vagas": { title: "Minhas vagas", icon: FolderOpen },
   vagas: { title: "Vagas abertas", icon: BriefcaseBusiness },
   minhas: { title: "Minhas candidaturas", icon: FileText },
 };
+type View = keyof typeof views;
 type Open = { type: "auth" } | { type: "card"; card: Card };
 const routes = () => location.hash.slice(1);
 function App() {
@@ -61,30 +78,54 @@ function App() {
     [notice, setNotice] = useState(""),
     [movedDemoId, setMovedDemoId] = useState(""),
     [revision, revise] = useState(0);
+  const [timelineBack, setTimelineBack] = useState({
+    href: "#minhas",
+    text: "Voltar às minhas candidaturas",
+  });
   const [gerenciar, setGerenciar] = useState(false);
   const detailHeading = useRef<HTMLHeadingElement>(null);
   const recruiter = demo || profile?.papel === "RECRUTADOR",
     candidate = demo || profile?.papel === "CANDIDATO";
   const links: View[] = [
-    ...(recruiter ? ["funil" as View] : []),
+    ...(recruiter ? (["funil", "minhas-vagas"] as const) : []),
     "vagas",
     ...(candidate ? ["minhas" as View] : []),
   ];
   const jobRouteId = route.startsWith("vagas/")
     ? route.slice("vagas/".length)
     : "";
-  const demoTimelineId =
-    demo && route.startsWith("minhas/") ? route.slice("minhas/".length) : "";
-  const section = jobRouteId ? "vagas" : demoTimelineId ? "minhas" : route;
-  const view = links.includes(section as View) ? (section as View) : links[0];
+  const timelineId = route.startsWith("minhas/")
+    ? route.slice("minhas/".length)
+    : "";
+  const section = jobRouteId ? "vagas" : timelineId ? "minhas" : route;
+  const view = Object.hasOwn(views, section) ? (section as View) : links[0];
+  const allowed = links.includes(view);
+  const companyJobs = view === "funil" || view === "minhas-vagas";
   const user = demo
     ? {
-        nome: view === "minhas" ? "Marina Costa" : "Lia Mendes",
-        papel: view === "minhas" ? "Candidata" : "Recrutadora",
+        nome:
+          view === "minhas" || view === "vagas" ? "Marina Costa" : "Lia Mendes",
+        papel:
+          view === "minhas" || view === "vagas" ? "Candidata" : "Recrutadora",
       }
     : profile;
   useEffect(() => {
-    const change = () => {
+    const change = (event: HashChangeEvent) => {
+      if (routes().startsWith("minhas/")) {
+        const from = new URL(event.oldURL).hash;
+        if (from.startsWith("#vagas/"))
+          setTimelineBack({ href: from, text: "Voltar à vaga" });
+        else if (demo && (!from || from === "#funil"))
+          setTimelineBack({
+            href: "#funil",
+            text: "Voltar ao funil de seleção",
+          });
+        else
+          setTimelineBack({
+            href: "#minhas",
+            text: "Voltar às minhas candidaturas",
+          });
+      }
       setRoute(routes());
       setMobile(false);
       setOpen(null);
@@ -113,19 +154,19 @@ function App() {
       read<{ limitePdf: number; swagger: boolean }>("/interface/config"),
   });
   const jobs = useQuery({
-    queryKey: ["jobs", view === "funil", profile?.id],
-    enabled: !jobRouteId && view !== "minhas",
+    queryKey: ["jobs", companyJobs, profile?.id],
+    enabled: allowed && !jobRouteId && view !== "minhas",
     queryFn: () =>
       demo
-        ? Promise.resolve(exampleJobs)
-        : list<Job>(view === "funil" ? "/painel/vagas" : "/vagas"),
+        ? Promise.resolve(sample.jobs(companyJobs))
+        : list<Job>(companyJobs ? "/painel/vagas" : "/vagas"),
   });
   const publicJob = useQuery({
     queryKey: ["public-job", jobRouteId],
     enabled: !!jobRouteId,
     queryFn: () =>
       demo
-        ? Promise.resolve(exampleJobs.find((j) => j.id === jobRouteId) ?? null)
+        ? Promise.resolve(sample.publicJob(jobRouteId))
         : readPublicJob(jobRouteId),
   });
   const jobId = jobs.data?.some((j) => j.id === chosen)
@@ -133,25 +174,44 @@ function App() {
     : (jobs.data?.[0]?.id ?? "");
   const board = useQuery({
     queryKey: ["board", jobId, profile?.id],
-    enabled: view === "funil" && !!jobId,
+    enabled: recruiter && view === "funil" && !!jobId,
     queryFn: () =>
       demo
         ? Promise.resolve(sample.board(jobId))
         : list<Card>("/painel/vagas/" + jobId + "/candidaturas"),
   });
   const mine = useQuery({
-    queryKey: ["mine", profile?.id],
-    enabled: view === "minhas",
-    queryFn: () =>
-      demo ? Promise.resolve(sample.mine()) : list<Card>("/painel/minhas"),
+    queryKey: ["mine", profile?.id, jobRouteId],
+    enabled: candidate && (view === "minhas" || !!jobRouteId),
+    refetchOnWindowFocus: true,
+    queryFn: () => {
+      if (demo) {
+        const cards = sample.mine();
+        return Promise.resolve(
+          jobRouteId ? cards.filter((c) => c.vagaId === jobRouteId) : cards,
+        );
+      }
+      if (jobRouteId && !isJobId(jobRouteId)) return Promise.resolve([]);
+      return list<Card>(
+        "/painel/minhas",
+        jobRouteId ? { vagaId: jobRouteId } : undefined,
+      );
+    },
   });
   const sharedJob = publicJob.data;
-  const demoApplication = demoTimelineId
-    ? mine.data?.find((c) => c.id === demoTimelineId)
-    : undefined;
+  const ownApplication =
+    candidate && timelineId
+      ? mine.data?.find((c) => c.id === timelineId)
+      : undefined;
+  const existingApplication =
+    candidate && jobRouteId
+      ? mine.data?.find((c) => c.vagaId === jobRouteId)
+      : undefined;
+  const checkingApplication =
+    mine.isPending || (!existingApplication && mine.isFetching);
   useEffect(() => {
     detailHeading.current?.focus();
-  }, [route, sharedJob?.id, demoApplication?.id]);
+  }, [route, sharedJob?.id, ownApplication?.id]);
   const timelineLink = movedDemoId && (
     <a href={"#minhas/" + movedDemoId}>
       Ver como Marina acompanha essa mudança
@@ -207,7 +267,10 @@ function App() {
     choose("");
     setNotice("Você entrou como " + p.nome + ".");
     setOpen(null);
-    if (!jobRouteId || p.papel !== "CANDIDATO") {
+    const resumeCandidate =
+      p.papel === "CANDIDATO" && (jobRouteId || view === "minhas");
+    const resumeRecruiter = p.papel === "RECRUTADOR" && companyJobs;
+    if (!resumeCandidate && !resumeRecruiter) {
       location.hash = p.papel === "RECRUTADOR" ? "funil" : "vagas";
     }
   }
@@ -328,12 +391,10 @@ function App() {
           )}
         </header>
         <main>
-          {!demo && profile && profile.papel !== "CANDIDATO" && (
+          {profile?.papel === "ADMIN" && allowed && (
             <div className="acoes-painel">
               <button className="secondary" onClick={() => setGerenciar(true)}>
-                {profile.papel === "ADMIN"
-                  ? "Gerenciar empresas e recrutadores"
-                  : "Gerenciar vagas"}
+                Gerenciar empresas e recrutadores
               </button>
             </div>
           )}
@@ -350,7 +411,26 @@ function App() {
               </button>
             </div>
           )}
-          {failure ? (
+          {!allowed ? (
+            <section className="job-detail">
+              <h1>{views[view].title}</h1>
+              <p>
+                {view === "minhas"
+                  ? "Esta área é exclusiva do candidato."
+                  : "Esta área é exclusiva do recrutador."}
+              </p>
+              {profile ? (
+                <a href={"#" + links[0]}>Voltar a {views[links[0]].title}</a>
+              ) : (
+                <button
+                  className="primary"
+                  onClick={() => setOpen({ type: "auth" })}
+                >
+                  Entrar na minha conta
+                </button>
+              )}
+            </section>
+          ) : failure ? (
             <section>
               <h1>{views[view].title}</h1>
               <p role="alert">{failure.message}</p>
@@ -381,6 +461,10 @@ function App() {
                     erroConfig={recursos.isError}
                     recarregar={() => void recursos.refetch()}
                     canApply={candidate}
+                    application={existingApplication}
+                    checkingApplication={checkingApplication}
+                    applicationError={mine.error?.message}
+                    reloadApplications={() => mine.refetch()}
                     guest={!demo && !profile}
                     enter={() => setOpen({ type: "auth" })}
                     done={() => {
@@ -390,36 +474,70 @@ function App() {
                   />
                 </>
               ) : (
-                <h1>Vaga indisponível</h1>
+                <>
+                  <h1>Vaga indisponível</h1>
+                  {candidate && (
+                    <ApplicationStatus
+                      application={existingApplication}
+                      checking={checkingApplication}
+                      checkError={mine.error?.message}
+                      retry={() => void mine.refetch()}
+                    />
+                  )}
+                  {!profile && !demo && (
+                    <button
+                      className="secondary"
+                      onClick={() => setOpen({ type: "auth" })}
+                    >
+                      Já me candidatei · Entrar para acompanhar
+                    </button>
+                  )}
+                </>
               )}
             </section>
-          ) : demoTimelineId ? (
+          ) : timelineId ? (
             <section className="job-detail">
-              <a href="#funil">Voltar ao funil de seleção</a>
+              <a href={timelineBack.href}>{timelineBack.text}</a>
               {mine.isPending ? (
                 <p role="status">Carregando candidatura…</p>
-              ) : demoApplication ? (
+              ) : ownApplication ? (
                 <>
                   <div>
                     <p className="eyebrow">
-                      <span /> VISÃO DA CANDIDATA
+                      <span />{" "}
+                      {demo ? "VISÃO DA CANDIDATA" : "MINHA CANDIDATURA"}
                     </p>
                     <h1 ref={detailHeading} tabIndex={-1}>
-                      {demoApplication.nome}
+                      {ownApplication.nome}
                     </h1>
                   </div>
                   <Details
-                    key={demoApplication.id}
-                    card={demoApplication}
+                    key={ownApplication.id}
+                    card={ownApplication}
                     own
                     move={move}
                     changed={revision}
                   />
                 </>
               ) : (
-                <h1>Candidatura indisponível nesta demonstração</h1>
+                <h1>Candidatura indisponível nesta conta</h1>
               )}
             </section>
+          ) : view === "minhas-vagas" ? (
+            jobs.isPending ? (
+              <p role="status">Carregando vagas…</p>
+            ) : (
+              <MinhasVagas
+                empresaId={profile?.empresaId}
+                vagas={jobs.data ?? []}
+                atualizar={async () => {
+                  await Promise.all([
+                    client.invalidateQueries({ queryKey: ["jobs"] }),
+                    client.invalidateQueries({ queryKey: ["public-job"] }),
+                  ]);
+                }}
+              />
+            )
           ) : view === "funil" && (jobId || jobs.isPending) ? (
             <Board
               jobs={jobs.data ?? []}
@@ -515,7 +633,10 @@ function App() {
                   )}
                 </div>
               ) : (
-                <p>Nenhuma vaga cadastrada.</p>
+                <p>
+                  Nenhuma vaga cadastrada.{" "}
+                  <a href="#minhas-vagas">Criar a primeira vaga</a>
+                </p>
               )}
               {profile?.papel === "ADMIN" &&
                 recursos.data?.swagger &&
@@ -528,19 +649,12 @@ function App() {
           )}
         </main>
       </div>
-      {gerenciar && profile && (
+      {gerenciar && profile?.papel === "ADMIN" && (
         <Dialog
-          title={
-            profile.papel === "ADMIN"
-              ? "Empresas e recrutadores"
-              : "Gerenciar vagas"
-          }
+          title="Empresas e recrutadores"
           close={() => setGerenciar(false)}
         >
-          <Operacao
-            perfil={profile}
-            atualizar={() => client.invalidateQueries({ queryKey: ["jobs"] })}
-          />
+          <Operacao perfil={profile} />
         </Dialog>
       )}
       {opened && (

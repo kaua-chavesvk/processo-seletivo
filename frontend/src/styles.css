@@ -885,6 +885,76 @@ dialog h2 {
 .job-detail .stack > form {
   max-width: 440px;
 }
+.jobs-toolbar,
+.job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.jobs-toolbar {
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.jobs-toolbar select {
+  min-width: 145px;
+}
+.managed-jobs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 14px;
+}
+.managed-job,
+.job-editor,
+.job-preview,
+.application-status {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+  padding: clamp(16px, 2vw, 24px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+  overflow-wrap: anywhere;
+}
+.managed-job {
+  align-content: start;
+}
+.managed-job .status,
+.application-status a {
+  justify-self: start;
+}
+.status-rascunho {
+  color: #83581d;
+  background: #fbefdc;
+}
+.status-encerrada {
+  color: #595465;
+  background: #efedf2;
+}
+.job-editor,
+.job-preview {
+  width: min(100%, 650px);
+}
+.job-preview .eyebrow {
+  margin: 0;
+}
+.close-confirm {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.close-confirm p,
+.application-status p {
+  font-size: 14px;
+}
+.application-status {
+  border-left: 3px solid var(--purple);
+}
+.application-status a {
+  text-decoration: none;
+}
 p[role="alert"] {
   color: #842849;
   background: #f9e9ee;

@@ -69,8 +69,14 @@ public class PainelApi {
 
   @GetMapping("/minhas")
   public Page<CandidaturaRepo.Cartao> minhas(
-      @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-    return candidaturas.cartoesDoCandidato(ator.exigir(CANDIDATO).getId(), pagina(page, size));
+      @RequestParam(required = false) UUID vagaId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    var candidato = ator.exigir(CANDIDATO).getId();
+    var pagina = pagina(page, size);
+    return vagaId == null
+        ? candidaturas.cartoesDoCandidato(candidato, pagina)
+        : candidaturas.cartoesDoCandidatoNaVaga(candidato, vagaId, pagina);
   }
 
   private Pageable pagina(int page, int size) {

@@ -37,4 +37,8 @@ public interface CandidaturaRepo extends JpaRepository<Candidatura, UUID> {
 
   @org.springframework.data.jpa.repository.Query(CARTOES + "where u.id=:candidatoId")
   Page<Cartao> cartoesDoCandidato(UUID candidatoId, Pageable pagina);
+
+  @org.springframework.data.jpa.repository.Query(
+      CARTOES + "where c.candidatoId=:candidatoId and c.vagaId=:vagaId")
+  Page<Cartao> cartoesDoCandidatoNaVaga(UUID candidatoId, UUID vagaId, Pageable pagina);
 }

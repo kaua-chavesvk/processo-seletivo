@@ -31,8 +31,8 @@ Para experimentar o fluxo administrativo, defina `ADMIN_EMAIL` e `ADMIN_PASSWORD
 ## Operar pelos perfis da interface
 
 1. Entre como administrador e abra **Gerenciar empresas e recrutadores**. Crie a empresa com nome e CNPJ, depois use **Recrutador** para cadastrar a pessoa que vai publicar as vagas.
-2. Entre como recrutador, abra **Gerenciar vagas**, preencha a descrição e salve o rascunho. Na aba **Publicar**, selecione o rascunho e confirme. A vaga passa a aparecer na lista pública.
-3. Na área pública, abra a vaga, crie uma conta de candidato e envie o PDF. O recrutador pode baixá-lo e alterar a etapa pelo quadro. O candidato consulta **Minhas candidaturas** para ver a mudança.
+2. Entre como recrutador e abra **Minhas vagas**. Em **Nova vaga**, preencha o anúncio e salve o rascunho. Use **Editar rascunho** para corrigir o texto, **Ver prévia** para conferir a apresentação e **Publicar vaga** para abrir as inscrições. Ao preencher a posição, use **Encerrar vaga** e confirme.
+3. Na área pública, abra a vaga, crie uma conta de candidato e envie o PDF. Ao reabrir a vaga com a mesma conta, **Acompanhar candidatura** leva ao histórico da inscrição. O recrutador pode baixar o currículo e alterar a etapa pelo quadro. O histórico continua disponível em **Minhas candidaturas** após o encerramento da vaga.
 
 ## Percorrer o primeiro processo pela API
 

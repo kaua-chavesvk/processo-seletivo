@@ -263,6 +263,15 @@ class FluxoTest {
     verificarAcessoEFunil(id, candidato, outro, recrutador, externo);
     chamar(patch(v + "/status"), recrutador, Map.of("status", "ENCERRADA"), 200);
     chamar(upload(vaga, "%PDF-1.7"), outro, null, 422);
+    String minhaNaVaga = "/painel/minhas?vagaId=" + vaga;
+    assertThat(chamar(get(minhaNaVaga), candidato, null, 200).at("/content/0/id").asText())
+        .isEqualTo(id);
+    assertThat(chamar(get(minhaNaVaga), outro, null, 200).path("content")).isEmpty();
+    assertThat(
+            chamar(get("/painel/minhas?vagaId=" + UUID.randomUUID()), candidato, null, 200)
+                .path("content"))
+        .isEmpty();
+    chamar(get(minhaNaVaga), recrutador, null, 403);
   }
 
   private String verificarInscricoesConcorrentes(String vaga, String candidato) throws Exception {

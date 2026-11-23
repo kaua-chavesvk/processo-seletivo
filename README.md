@@ -12,7 +12,9 @@ Uma candidatura começa com um PDF e passa por várias pessoas. O Trilha dá ao 
 
 1. Na demonstração, abra **Marina Costa** em **Triagem**, escolha **Entrevista** e escreva uma orientação, por exemplo, “Leve um projeto para a conversa”. Clique em **Salvar etapa**. No celular, o funil abre em lista e permite filtrar por etapa. No desktop, também dá para arrastar o cartão entre colunas.
 2. Clique em **Ver como Marina acompanha essa mudança**. O histórico da candidata mostra a entrevista e a orientação que você acabou de escrever.
-3. Abra a [vaga fictícia de Analista de Dados](https://trilha-processo-seletivo.vercel.app/#vagas/dados). Use **Copiar link da vaga** para abrir a mesma oportunidade em outra aba ou **Simular candidatura** para experimentar a inscrição. Recarregar a demonstração restaura os dados fictícios.
+3. Na mesma aba, abra a [vaga de Product Designer](https://trilha-processo-seletivo.vercel.app/#vagas/produto). Ela reconhece a inscrição da Marina e oferece **Acompanhar candidatura**. Para experimentar uma inscrição nova, abra a [vaga de Analista de Dados](https://trilha-processo-seletivo.vercel.app/#vagas/dados).
+
+Em [Minhas vagas](https://trilha-processo-seletivo.vercel.app/#minhas-vagas), experimente o lado do recrutador. Crie um rascunho, revise o anúncio na prévia e publique. Ele aparece em **Vagas abertas**. Ao encerrar a vaga, as inscrições anteriores continuam acessíveis em **Minhas candidaturas**. As alterações da demonstração duram até a página ser recarregada.
 
 A aplicação com login usa o PostgreSQL e o armazenamento privado de PDFs. A lista pública reflete as vagas que um recrutador publicou. As inscrições e os arquivos enviados por esse endereço persistem entre sessões.
 

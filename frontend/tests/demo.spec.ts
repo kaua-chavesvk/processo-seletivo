@@ -31,6 +31,45 @@ test("recrutamento: mudança de etapa, histórico e busca", async ({ page }) => 
   ).toBeVisible();
 });
 
+test("vaga já disputada mostra a etapa atual e abre o histórico da inscrição", async ({
+  page,
+}) => {
+  await page.goto("/#vagas/produto");
+  const inscricao = page.getByRole("region", { name: "Sua candidatura" });
+  await expect(inscricao).toContainText("Você já se candidatou");
+  await expect(inscricao).toContainText("Triagem");
+  await expect(
+    page.getByRole("button", { name: "Simular candidatura" }),
+  ).toHaveCount(0);
+  const acompanhar = inscricao.getByRole("link", {
+    name: "Acompanhar candidatura",
+  });
+  const destino = await acompanhar.getAttribute("href");
+  expect(destino).toMatch(/^#minhas\/.+/);
+
+  await page.getByRole("link", { name: "Funil de seleção" }).click();
+  await page.getByRole("button", { name: /Marina Costa/ }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Alterar etapa").selectOption("ENTREVISTA");
+  await dialog.getByRole("button", { name: "Salvar etapa" }).click();
+  await expect(dialog.getByRole("listitem").last()).toContainText("Entrevista");
+  await dialog.getByRole("button", { name: "Fechar" }).click();
+
+  await page.getByRole("link", { name: "Vagas abertas" }).click();
+  await page
+    .getByRole("article")
+    .filter({ hasText: "Product Designer" })
+    .getByRole("link", { name: "Ver vaga" })
+    .click();
+  await expect(inscricao).toContainText("Entrevista");
+  await expect(acompanhar).toHaveAttribute("href", destino!);
+  await acompanhar.click();
+  await expect(
+    page.getByRole("heading", { name: "Marina Costa" }),
+  ).toBeVisible();
+  await expect(page.getByRole("listitem").last()).toContainText("Entrevista");
+});
+
 test("candidatura fictícia e desistência em tela pequena", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
@@ -42,7 +81,20 @@ test("candidatura fictícia e desistência em tela pequena", async ({ page }) =>
     .getByRole("link", { name: "Ver vaga" })
     .click();
   await page.getByRole("button", { name: "Simular candidatura" }).click();
-  await page.getByRole("button", { name: /Analista de Dados/ }).click();
+  await expect(
+    page.getByRole("button", { name: /Analista de Dados/ }),
+  ).toContainText("Triagem");
+  await page.getByRole("button", { name: "Abrir navegação" }).click();
+  await page.getByRole("link", { name: "Vagas abertas" }).click();
+  await page
+    .getByRole("article")
+    .filter({ hasText: "Analista de Dados" })
+    .getByRole("link", { name: "Ver vaga" })
+    .click();
+  const inscricao = page.getByRole("region", { name: "Sua candidatura" });
+  await expect(inscricao).toContainText("Triagem");
+  await inscricao.getByRole("link", { name: "Acompanhar candidatura" }).click();
+  await expect(page.getByText(/Analista de Dados/)).toBeVisible();
   await page.getByRole("button", { name: "Desistir da candidatura" }).click();
   await page.getByRole("button", { name: "Confirmar desistência" }).click();
   await expect(page.getByRole("listitem").last()).toContainText("Desistiu");
@@ -51,6 +103,87 @@ test("candidatura fictícia e desistência em tela pequena", async ({ page }) =>
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBeTruthy();
+});
+
+test("recrutadora edita o rascunho, confere a prévia e controla a publicação", async ({
+  page,
+}) => {
+  const novoTitulo = "Designer de pesquisa";
+  const descricao = "Planejar entrevistas e testar protótipos com usuários.";
+  await page.goto("/");
+  const minhasVagas = page.getByRole("link", {
+    name: "Minhas vagas",
+    exact: true,
+  });
+  const vagasAbertas = page.getByRole("link", {
+    name: "Vagas abertas",
+    exact: true,
+  });
+  await minhasVagas.click();
+  await page.getByRole("button", { name: "Nova vaga" }).click();
+  await page.getByLabel("Título da vaga").fill("Rascunho de pesquisa");
+  await page.getByLabel("Descrição").fill(descricao);
+  await page.getByLabel("Localização").fill("Recife");
+  await page.getByRole("button", { name: "Salvar rascunho" }).click();
+  const rascunho = page
+    .getByRole("article")
+    .filter({ hasText: "Rascunho de pesquisa" });
+  await rascunho.getByRole("button", { name: "Editar rascunho" }).click();
+  await expect(page.getByLabel("Descrição")).toHaveValue(descricao);
+  await page.getByLabel("Título da vaga").fill(novoTitulo);
+  await page.getByRole("button", { name: "Salvar rascunho" }).click();
+  const vaga = page.getByRole("article").filter({ hasText: novoTitulo });
+  await vaga.getByRole("button", { name: "Ver prévia" }).click();
+  await expect(
+    page.getByRole("heading", { name: novoTitulo, exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(descricao, { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Simular candidatura" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Voltar para minhas vagas" }).click();
+  await vagasAbertas.click();
+  await expect(
+    page.getByRole("heading", { name: "Product Designer" }),
+  ).toBeVisible();
+  await expect(vaga).toHaveCount(0);
+
+  await minhasVagas.click();
+  await vaga.getByRole("button", { name: "Publicar vaga" }).click();
+  await expect(vaga).toContainText("Publicada");
+  await vagasAbertas.click();
+  await vaga.getByRole("link", { name: "Ver vaga" }).click();
+  const endereco = page.url();
+  await page.getByRole("button", { name: "Simular candidatura" }).click();
+  await expect(
+    page.getByRole("button", { name: new RegExp(novoTitulo) }),
+  ).toContainText("Triagem");
+
+  await minhasVagas.click();
+  await vaga.getByRole("button", { name: "Encerrar vaga" }).click();
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(vaga).toContainText("Publicada");
+  await vaga.getByRole("button", { name: "Encerrar vaga" }).click();
+  await page.getByRole("button", { name: "Confirmar encerramento" }).click();
+  await page.getByLabel("Filtrar por situação").selectOption("ENCERRADA");
+  await expect(vaga).toContainText("Encerrada");
+  await vagasAbertas.click();
+  await expect(
+    page.getByRole("heading", { name: "Product Designer" }),
+  ).toBeVisible();
+  await expect(vaga).toHaveCount(0);
+  await page.goto(endereco);
+  await expect(
+    page.getByRole("heading", { name: "Vaga indisponível" }),
+  ).toBeVisible();
+  const inscricao = page.getByRole("region", { name: "Sua candidatura" });
+  await expect(inscricao).toContainText("Triagem");
+  await expect(
+    page.getByRole("button", { name: "Simular candidatura" }),
+  ).toHaveCount(0);
+  await inscricao.getByRole("link", { name: "Acompanhar candidatura" }).click();
+  await expect(page.getByRole("listitem").last()).toContainText("Triagem");
+  await expect(page.getByText(new RegExp(novoTitulo))).toBeVisible();
 });
 
 test("lista móvel filtra etapas e leva a recrutadora ao histórico da Marina", async ({

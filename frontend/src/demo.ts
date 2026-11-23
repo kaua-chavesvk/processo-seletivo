@@ -7,7 +7,7 @@ import {
   type Stage,
 } from "./model";
 
-export const jobs: Job[] = [
+const jobs: Job[] = [
   {
     id: "produto",
     titulo: "Product Designer",
@@ -42,6 +42,7 @@ export const jobs: Job[] = [
     status: "PUBLICADA",
   },
 ];
+const exampleJobIds = new Set(jobs.map((job) => job.id));
 const roster: [string, Stage, number][] = [
   ["Marina Costa", "TRIAGEM", 0],
   ["Rafael Almeida", "TRIAGEM", 0],
@@ -88,6 +89,37 @@ roster.forEach(([nome, etapaAtual, job], i) => {
   }
 });
 export const sample = {
+  isExampleJob: (id: string) => exampleJobIds.has(id),
+  jobs: (includeUnpublished: boolean) =>
+    jobs
+      .filter((job) => includeUnpublished || job.status === "PUBLICADA")
+      .map((job) => ({ ...job, tecnologias: [...job.tecnologias] })),
+  publicJob: (id: string) => {
+    const job = jobs.find((v) => v.id === id && v.status === "PUBLICADA");
+    return job ? { ...job, tecnologias: [...job.tecnologias] } : null;
+  },
+  saveDraft(data: Omit<Job, "id" | "status">, id?: string) {
+    if (!id) {
+      jobs.unshift({ ...data, id: crypto.randomUUID(), status: "RASCUNHO" });
+      return;
+    }
+    const job = jobs.find((v) => v.id === id);
+    if (!job || job.status !== "RASCUNHO")
+      throw new Error("A edição exige uma vaga em rascunho.");
+    Object.assign(job, data);
+  },
+  setJobStatus(id: string, status: "PUBLICADA" | "ENCERRADA") {
+    const job = jobs.find((v) => v.id === id);
+    if (
+      !job ||
+      (status === "PUBLICADA" && job.status !== "RASCUNHO") ||
+      (status === "ENCERRADA" && job.status !== "PUBLICADA")
+    )
+      throw new Error(
+        "A situação da vaga mudou. Confira a lista e tente novamente.",
+      );
+    job.status = status;
+  },
   board: (id: string) =>
     cards.filter((c) => c.vagaId === id).map((c) => ({ ...c })),
   mine: () => cards.filter((c) => c.nome === demoName).map((c) => ({ ...c })),
@@ -108,6 +140,8 @@ export const sample = {
     append(card, stage, new Date().toISOString(), observacao);
   },
   apply(job: Job) {
+    if (!jobs.some((v) => v.id === job.id && v.status === "PUBLICADA"))
+      throw new Error("Esta vaga não está recebendo candidaturas.");
     if (cards.some((c) => c.nome === demoName && c.vagaId === job.id))
       throw new Error("Você já se candidatou a esta vaga.");
     const card: Card = {

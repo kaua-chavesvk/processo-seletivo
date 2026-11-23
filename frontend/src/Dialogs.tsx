@@ -6,29 +6,21 @@ import {
   type ReactNode,
 } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowRight,
-  Clock3,
-  Download,
-  FileText,
-  Link2,
-  MapPin,
-  X,
-} from "lucide-react";
+import { ArrowRight, Clock3, Download, FileText, Link2, X } from "lucide-react";
 import {
   date,
   demo,
   labels,
   options,
-  pretty,
   type Card,
   type Event as Change,
   type Job,
   type Profile,
   type Stage,
 } from "./model";
-import { download, json, login, read, request } from "./api";
+import { ApiError, download, json, login, read, request } from "./api";
 import { sample } from "./demo";
+import { ResumoVaga } from "./ResumoVaga";
 
 export function Dialog({
   title,
@@ -146,12 +138,51 @@ export function Auth({ done }: { done: (p: Profile) => void }) {
     </form>
   );
 }
+export function ApplicationStatus({
+  application,
+  checking,
+  checkError,
+  retry,
+}: {
+  application?: Card;
+  checking: boolean;
+  checkError?: string;
+  retry: () => void;
+}) {
+  if (checking) return <p role="status">Consultando sua candidatura…</p>;
+  if (checkError)
+    return (
+      <div className="stack">
+        <p role="alert">Falha ao consultar sua candidatura. {checkError}</p>
+        <button className="secondary" onClick={retry}>
+          Tentar novamente
+        </button>
+      </div>
+    );
+  if (!application) return null;
+  return (
+    <section className="application-status" aria-label="Sua candidatura">
+      <h2>Você já se candidatou</h2>
+      <p>
+        Etapa atual · <strong>{labels[application.etapaAtual]}</strong>
+      </p>
+      <a className="primary" href={"#minhas/" + application.id}>
+        Acompanhar candidatura <ArrowRight size={16} aria-hidden="true" />
+      </a>
+    </section>
+  );
+}
+
 export function JobDetails({
   job,
   limitePdf,
   erroConfig,
   recarregar,
   canApply,
+  application,
+  checkingApplication,
+  applicationError,
+  reloadApplications,
   guest,
   enter,
   done,
@@ -161,6 +192,10 @@ export function JobDetails({
   erroConfig: boolean;
   recarregar: () => void;
   canApply: boolean;
+  application?: Card;
+  checkingApplication: boolean;
+  applicationError?: string;
+  reloadApplications: () => Promise<unknown>;
   guest: boolean;
   enter: () => void;
   done: () => void;
@@ -203,25 +238,28 @@ export function JobDetails({
       done();
     } catch (ex) {
       setError((ex as Error).message);
+      if (
+        (ex instanceof ApiError && ex.status === 409) ||
+        (demo && sample.mine().some((card) => card.vagaId === job.id))
+      ) {
+        await reloadApplications();
+      }
     } finally {
       setBusy(false);
     }
   }
   return (
     <div className="stack">
-      <div className="meta">
-        <MapPin size={15} />
-        {job.localizacao} · {pretty(job.modalidade)} · {pretty(job.nivel)}
-      </div>
-      <p>{job.descricao}</p>
-      <div className="tags">
-        {job.tecnologias.map((t) => (
-          <span key={t}>{t}</span>
-        ))}
-      </div>
-      <button className="secondary" onClick={copyLink}>
-        <Link2 size={16} /> Copiar link da vaga
-      </button>
+      <ResumoVaga job={job} />
+      {!demo || sample.isExampleJob(job.id) ? (
+        <button className="secondary" onClick={copyLink}>
+          <Link2 size={16} /> Copiar link da vaga
+        </button>
+      ) : (
+        <p className="note">
+          Esta vaga de demonstração está disponível apenas nesta aba.
+        </p>
+      )}
       {share === "copied" && <p role="status">Link da vaga copiado.</p>}
       {share === "manual" && (
         <label>
@@ -240,43 +278,57 @@ export function JobDetails({
         </button>
       )}
       {canApply && (
-        <form className="stack" onSubmit={apply}>
-          {demo ? (
-            <p className="note">
-              <FileText size={17} /> A simulação usa o perfil de Marina Costa e
-              um currículo fictício.
-            </p>
-          ) : (
-            <label>
-              Currículo em PDF{" "}
-              {limitePdf
-                ? "· até " +
-                  (limitePdf / 1048576).toLocaleString("pt-BR") +
-                  " MB"
-                : ""}
-              <input
-                type="file"
-                accept="application/pdf,.pdf"
-                required
-                onChange={(e) => setFile(e.target.files?.[0])}
-              />
-            </label>
-          )}
-          {error && <p role="alert">{error}</p>}
-          {erroConfig && (
-            <p role="alert">
-              Falha ao carregar o limite de envio.{" "}
-              <button type="button" onClick={recarregar}>
-                Tentar novamente
-              </button>
-            </p>
-          )}
-          <button className="primary" disabled={busy || (!demo && !limitePdf)}>
-            {demo ? "Simular candidatura" : "Enviar candidatura"}
-            <ArrowRight size={16} />
-          </button>
-        </form>
+        <ApplicationStatus
+          application={application}
+          checking={checkingApplication}
+          checkError={applicationError}
+          retry={() => void reloadApplications()}
+        />
       )}
+      {canApply &&
+        !application &&
+        !checkingApplication &&
+        !applicationError && (
+          <form className="stack" onSubmit={apply}>
+            {demo ? (
+              <p className="note">
+                <FileText size={17} /> A simulação usa o perfil de Marina Costa
+                e um currículo fictício.
+              </p>
+            ) : (
+              <label>
+                Currículo em PDF{" "}
+                {limitePdf
+                  ? "· até " +
+                    (limitePdf / 1048576).toLocaleString("pt-BR") +
+                    " MB"
+                  : ""}
+                <input
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  required
+                  onChange={(e) => setFile(e.target.files?.[0])}
+                />
+              </label>
+            )}
+            {error && <p role="alert">{error}</p>}
+            {erroConfig && (
+              <p role="alert">
+                Falha ao carregar o limite de envio.{" "}
+                <button type="button" onClick={recarregar}>
+                  Tentar novamente
+                </button>
+              </p>
+            )}
+            <button
+              className="primary"
+              disabled={busy || (!demo && !limitePdf)}
+            >
+              {demo ? "Simular candidatura" : "Enviar candidatura"}
+              <ArrowRight size={16} />
+            </button>
+          </form>
+        )}
     </div>
   );
 }
