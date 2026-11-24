@@ -33,23 +33,30 @@ class DominioTest {
 
   @Test
   void matrizCompletaDoFunil() {
-    var avancos = List.of(TRIAGEM, ENTREVISTA, TESTE_TECNICO, PROPOSTA, CONTRATADO);
-    for (var origem : Etapa.values())
-      for (var destino : Etapa.values())
-        for (var papel : Papel.values()) {
-          int i = avancos.indexOf(origem);
-          boolean ativa = i >= 0 && i < 4;
-          boolean permitido =
-              ativa
-                  && ((papel == Papel.CANDIDATO && destino == DESISTIU)
-                      || (papel == Papel.RECRUTADOR
-                          && (destino == REPROVADO || destino == avancos.get(i + 1))));
-          if (permitido)
-            assertThatCode(() -> Funil.validar(origem, destino, papel)).doesNotThrowAnyException();
-          else
-            assertThatThrownBy(() -> Funil.validar(origem, destino, papel))
-                .isInstanceOf(TransicaoInvalida.class);
+    record Transicao(Papel papel, Etapa origem, Etapa destino) {}
+    var permitidas = Set.of(
+        new Transicao(Papel.RECRUTADOR, TRIAGEM, ENTREVISTA),
+        new Transicao(Papel.RECRUTADOR, TRIAGEM, REPROVADO),
+        new Transicao(Papel.RECRUTADOR, ENTREVISTA, TESTE_TECNICO),
+        new Transicao(Papel.RECRUTADOR, ENTREVISTA, REPROVADO),
+        new Transicao(Papel.RECRUTADOR, TESTE_TECNICO, PROPOSTA),
+        new Transicao(Papel.RECRUTADOR, TESTE_TECNICO, REPROVADO),
+        new Transicao(Papel.RECRUTADOR, PROPOSTA, CONTRATADO),
+        new Transicao(Papel.RECRUTADOR, PROPOSTA, REPROVADO),
+        new Transicao(Papel.CANDIDATO, TRIAGEM, DESISTIU),
+        new Transicao(Papel.CANDIDATO, ENTREVISTA, DESISTIU),
+        new Transicao(Papel.CANDIDATO, TESTE_TECNICO, DESISTIU),
+        new Transicao(Papel.CANDIDATO, PROPOSTA, DESISTIU));
+    for (var papel : Papel.values()) {
+      for (var origem : Etapa.values()) {
+        for (var destino : Etapa.values()) {
+          var caso = new Transicao(papel, origem, destino);
+          var resultado = catchThrowable(() -> Funil.validar(origem, destino, papel));
+          if (permitidas.contains(caso)) assertThat(resultado).as("%s", caso).isNull();
+          else assertThat(resultado).as("%s", caso).isInstanceOf(TransicaoInvalida.class);
         }
+      }
+    }
   }
 
   @Test
