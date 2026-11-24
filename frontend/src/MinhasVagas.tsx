@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { json, request } from "./api";
-import { sample } from "./demo";
-import { demo, pretty, type Job } from "./model";
+import { recruitment } from "./recruitment";
+import { nextJobStatus, pretty, type Job } from "./model";
 import { ResumoVaga } from "./ResumoVaga";
 
 type Tela =
@@ -154,16 +153,7 @@ export function MinhasVagas({
           throw new Error(
             "Use até 64 tecnologias, com no máximo 255 caracteres cada.",
           );
-        if (demo) sample.saveDraft(dados, vaga?.id);
-        else if (vaga) await request("/vagas/" + vaga.id, json("PUT", dados));
-        else {
-          if (!empresaId)
-            throw new Error("O perfil não está vinculado a uma empresa.");
-          await request(
-            "/empresas/" + empresaId + "/vagas",
-            json("POST", dados),
-          );
-        }
+        await recruitment.saveDraft(dados, vaga?.id, empresaId);
       },
       "RASCUNHO",
       "Rascunho salvo.",
@@ -172,14 +162,7 @@ export function MinhasVagas({
 
   function mudarSituacao(v: Job, status: "PUBLICADA" | "ENCERRADA") {
     void executar(
-      async () => {
-        if (demo) sample.setJobStatus(v.id, status);
-        else
-          await request(
-            "/vagas/" + v.id + "/status",
-            json("PATCH", { status }),
-          );
-      },
+      () => recruitment.setJobStatus(v.id, status),
       status,
       status === "PUBLICADA" ? "Vaga publicada." : "Vaga encerrada.",
     );
@@ -227,7 +210,7 @@ export function MinhasVagas({
           </h2>
           <ResumoVaga job={vaga} />
           <div className="job-actions">
-            {vaga.status === "RASCUNHO" && (
+            {nextJobStatus(vaga) === "PUBLICADA" && (
               <>
                 <button
                   className="primary"
@@ -331,7 +314,7 @@ export function MinhasVagas({
                     >
                       Ver prévia
                     </button>
-                    {v.status === "RASCUNHO" && (
+                    {nextJobStatus(v) === "PUBLICADA" && (
                       <>
                         <button
                           className="secondary"
@@ -349,7 +332,7 @@ export function MinhasVagas({
                         </button>
                       </>
                     )}
-                    {v.status === "PUBLICADA" && (
+                    {nextJobStatus(v) === "ENCERRADA" && (
                       <button
                         className="link"
                         disabled={ocupado}

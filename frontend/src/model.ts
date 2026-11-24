@@ -15,9 +15,14 @@ export const active: Stage[] = [
   "PROPOSTA",
 ];
 export const closed: Stage[] = ["CONTRATADO", "REPROVADO", "DESISTIU"];
-export function options(stage: Stage): Stage[] {
+export function options(
+  stage: Stage,
+  role: Profile["papel"] = "RECRUTADOR",
+): Stage[] {
   const index = active.indexOf(stage);
-  return index < 0 ? [] : [active[index + 1] ?? "CONTRATADO", "REPROVADO"];
+  if (index < 0 || role === "ADMIN") return [];
+  if (role === "CANDIDATO") return ["DESISTIU"];
+  return [active[index + 1] ?? "CONTRATADO", "REPROVADO"];
 }
 export type Job = {
   id: string;
@@ -29,6 +34,11 @@ export type Job = {
   tecnologias: string[];
   status: string;
 };
+export function nextJobStatus(job: Job) {
+  if (job.status === "RASCUNHO") return "PUBLICADA";
+  if (job.status === "PUBLICADA") return "ENCERRADA";
+  return null;
+}
 export type Card = {
   id: string;
   vagaId: string;
@@ -51,6 +61,7 @@ export type Profile = {
 };
 export const initials = (name: string) => {
   const words = name.trim().split(/\s+/);
+  if (!words[0]) return "";
   return (
     words[0][0] + (words.length > 1 ? words.at(-1)![0] : "")
   ).toUpperCase();
@@ -72,4 +83,3 @@ export const pretty = (value: string) =>
     ENCERRADA: "Encerrada",
     RASCUNHO: "Rascunho",
   })[value] ?? value;
-export const demo = import.meta.env.MODE === "demonstracao";
