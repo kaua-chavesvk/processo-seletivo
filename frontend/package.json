@@ -2,6 +2,7 @@
   "name": "trilha-selecao",
   "version": "1.0.0",
   "scripts": {
+    "test:unit": "node --test unit/*.test.mjs",
     "test": "playwright test",
     "build": "tsc --noEmit && vite build",
     "dev": "vite",

@@ -14,10 +14,14 @@ jobs:
           cache: maven
       - run: sh mvnw -B verify dependency:tree -Dscope=runtime -DoutputFile=target/runtime-tree.txt
       - run: python3 scripts/auditar_dependencias.py target/runtime-tree.txt --ci
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
       - name: Compilar e testar a interface
         working-directory: frontend
         run: |
           npm ci
+          npm run test:unit
           npm run build
           npm audit --audit-level=high
           npx playwright install --with-deps chromium

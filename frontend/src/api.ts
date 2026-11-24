@@ -2,18 +2,17 @@ import type { Job, Profile } from "./model";
 type Session = { accessToken: string; refreshToken: string };
 let session: Session | null = null;
 let generation = 0;
-let renewing: Promise<void> | undefined;
+let renewing: { version: number; result: Promise<void> } | undefined;
 export const json = (method: string, data: unknown): RequestInit => ({
   method,
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(data),
 });
 export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-  ) {
+  readonly status: number;
+  constructor(status: number, message: string) {
     super(message);
+    this.status = status;
   }
 }
 async function error(response: Response) {
@@ -68,11 +67,13 @@ export async function request(path: string, init: RequestInit = {}) {
   let res = await send(path, init, previous?.accessToken);
   if (res.status === 401 && previous && generation === version) {
     if (session === previous) {
-      if (!renewing)
-        renewing = renew(previous, version).finally(() => {
-          renewing = undefined;
+      if (renewing?.version !== version) {
+        const result = renew(previous, version).finally(() => {
+          if (renewing?.version === version) renewing = undefined;
         });
-      await renewing;
+        renewing = { version, result };
+      }
+      await renewing.result;
     }
     if (session && generation === version)
       res = await send(path, init, session.accessToken);
@@ -117,12 +118,13 @@ export async function list<T>(
 export async function login(email: string, senha: string): Promise<Profile> {
   const res = await send("/auth/login", json("POST", { email, senha }));
   if (!res.ok) throw await error(res);
-  generation++;
-  session = await res.json();
+  const next: Session = await res.json();
+  const version = ++generation;
+  session = next;
   try {
     return await read<Profile>("/painel/perfil");
   } catch (ex) {
-    await logout();
+    if (generation === version) await logout();
     throw ex;
   }
 }
