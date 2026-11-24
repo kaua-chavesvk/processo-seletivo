@@ -61,9 +61,20 @@ public class CandidaturasApi {
     return servico.desistir(id);
   }
 
-  @GetMapping("/candidaturas/{id}/historico")
+  @GetMapping(
+      value = "/candidaturas/{id}/historico",
+      params = {"!page", "!size"})
   public List<CandidaturaMapper.HistoricoDto> historico(@PathVariable UUID id) {
-    return servico.historico(id);
+    return servico.historico(id, Pageable.unpaged()).getContent();
+  }
+
+  @GetMapping("/candidaturas/{id}/historico")
+  public Page<CandidaturaMapper.HistoricoDto> historicoPaginado(
+      @PathVariable UUID id,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    Pagina.validarLimites(page, size);
+    return servico.historico(id, PageRequest.of(page, size));
   }
 
   @GetMapping(value = "/candidaturas/{id}/curriculo", produces = MediaType.APPLICATION_PDF_VALUE)

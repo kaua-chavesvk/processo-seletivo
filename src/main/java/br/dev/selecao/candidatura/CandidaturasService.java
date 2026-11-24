@@ -78,8 +78,8 @@ public class CandidaturasService {
     var u = ator.exigir(RECRUTADOR, ADMIN);
     if (u.getPapel() == RECRUTADOR) ator.empresa(empresaId);
     var v = banco.obter(Vaga.class, vagaId);
-    if (u.getPapel() == RECRUTADOR) ator.empresa(v.getEmpresaId());
-    if (!v.getEmpresaId().equals(empresaId)) throw Falha.ausente();
+    if (!v.getEmpresaId().equals(empresaId))
+      throw u.getPapel() == RECRUTADOR ? Falha.negado() : Falha.ausente();
     var p = pagina(page, size, sort);
     return (etapa == null
             ? candidaturas.findByVagaId(vagaId, p)
@@ -101,12 +101,12 @@ public class CandidaturasService {
     return mudar(c, Etapa.DESISTIU, u, null);
   }
 
-  public List<CandidaturaMapper.HistoricoDto> historico(UUID id) {
+  public Page<CandidaturaMapper.HistoricoDto> historico(UUID id, Pageable pagina) {
     var u = ator.exigir(ADMIN, RECRUTADOR, CANDIDATO);
     acesso(banco.obter(Candidatura.class, id), u);
-    return historicos.findByCandidaturaIdOrderByAlteradoEmAscIdAsc(id).stream()
-        .map(mapper::historico)
-        .toList();
+    return historicos
+        .findByCandidaturaIdOrderByAlteradoEmAscIdAsc(id, pagina)
+        .map(mapper::historico);
   }
 
   public Resource curriculo(UUID id) {

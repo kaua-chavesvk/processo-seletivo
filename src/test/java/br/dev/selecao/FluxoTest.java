@@ -253,6 +253,13 @@ class FluxoTest {
     chamar(get("/vagas?sort=empresaId"), null, null, 400);
     String id = verificarInscricoesConcorrentes(vaga, candidato);
     chamar(put(v), recrutador, dados, 422);
+    String listaDaVaga = "/empresas/" + emp + "/vagas/" + vaga + "/candidaturas";
+    String empresaIncorreta = "/empresas/" + outra + "/vagas/" + vaga + "/candidaturas";
+    assertThat(chamar(get(listaDaVaga), recrutador, null, 200).at("/content/0/id").asText())
+        .isEqualTo(id);
+    chamar(get(listaDaVaga), externo, null, 403);
+    chamar(get(empresaIncorreta), externo, null, 403);
+    chamar(get(empresaIncorreta), admin, null, 404);
     String painel = "/painel/vagas/" + vaga + "/candidaturas";
     chamar(get(painel), externo, null, 403);
     chamar(get(painel), candidato, null, 403);
@@ -314,6 +321,15 @@ class FluxoTest {
     chamar(patch(c + "/etapa"), recrutador, Map.of("novaEtapa", "REPROVADO"), 422);
     var historico = chamar(get(c + "/historico"), candidato, null, 200);
     assertThat(historico).hasSize(3);
+    var segunda = chamar(get(c + "/historico?page=1&size=1"), candidato, null, 200);
+    assertThat(segunda.path("content")).hasSize(1);
+    assertThat(segunda.at("/content/0")).isEqualTo(historico.get(1));
+    assertThat(segunda.path("totalPages").asInt()).isEqualTo(3);
+    assertThat(chamar(get(c + "/historico?size=2"), candidato, null, 200).path("content"))
+        .hasSize(2);
+    chamar(get(c + "/historico?page=0"), outro, null, 404);
+    chamar(get(c + "/historico?page=0"), externo, null, 403);
+    chamar(get(c + "/historico?size=101"), candidato, null, 400);
     var campos = new HashSet<String>();
     historico.get(0).fieldNames().forEachRemaining(campos::add);
     assertThat(campos)
