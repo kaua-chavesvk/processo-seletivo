@@ -1,6 +1,12 @@
-# Operar a plataforma de processo seletivo
+# Operar o Trilha
 
 API REST em Java 21 e Spring Boot 3.5 para publicar vagas, receber currículos em PDF e acompanhar candidaturas. No Compose, PostgreSQL 16 mantém o funil e seu histórico. Migrações Flyway criam as tabelas e o Hibernate valida o schema ao iniciar.
+
+Trilha é o nome da aplicação, do artefato Maven e do pacote npm. O repositório público mantém o endereço `kaua-chavesvk/processo-seletivo`, e as classes Java usam o namespace `br.dev.selecao`. Os identificadores dos dois projetos da Vercel aparecem na seção de implantação.
+
+## Testes da interface
+
+Na pasta `frontend/`, com Node.js 24 e as dependências instaladas por `npm ci`, rode `npm run test:unit` para verificar o modelo do funil, os formatadores e a renovação de sessão. Para testar a demo no navegador, execute `npx playwright install chromium` e `npm test -- demo.spec.ts`.
 
 ## Demonstração automática
 
@@ -42,7 +48,7 @@ No Swagger UI, execute o login, clique em **Authorize** e cole apenas o valor de
 2. Como administrador, crie uma empresa em `POST /empresas` com `nome`, `cnpj` e `site` opcional. Para criar seu recrutador, envie `{"dados":{"nome":"Recrutador","email":"recrutador@example.org","senha":"troque-esta-senha"},"papel":"RECRUTADOR","empresaId":"<uuid>"}` para `POST /usuarios`.
 3. Faça login como recrutador. Crie a vaga em `POST /empresas/{empresaId}/vagas` e publique com `PATCH /vagas/{id}/status` e `{"status":"PUBLICADA"}`.
 4. Cadastre o candidato em `POST /auth/cadastro`, faça login e envie um PDF em `POST /vagas/{id}/candidaturas`, no campo multipart `curriculo`. A inscrição inicia em TRIAGEM.
-5. Como recrutador, envie `{"novaEtapa":"ENTREVISTA","observacao":"Conversa agendada"}` para `PATCH /candidaturas/{id}/etapa`. Consulte as mudanças em `GET /candidaturas/{id}/historico`. O candidato pode desistir enquanto o processo estiver ativo.
+5. Como recrutador, envie `{"novaEtapa":"ENTREVISTA","observacao":"Conversa agendada"}` para `PATCH /candidaturas/{id}/etapa`. Consulte as mudanças em `GET /candidaturas/{id}/historico?page=0&size=20`. A página começa em zero e aceita de 1 a 100 itens, em ordem cronológica. A consulta sem parâmetros continua retornando a lista para os clientes existentes. O candidato pode desistir enquanto o processo estiver ativo.
 
 A busca pública aceita modalidade, nível, tecnologia e localização. A página inicial é zero, o tamanho padrão é 20 e o limite é 100. Em vagas, use por exemplo `sort=titulo,asc` ou `sort=criada_em,desc`. Em candidaturas, use `criada_em`. As respostas de erro incluem um identificador também disponível em `X-Correlation-ID`.
 

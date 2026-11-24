@@ -1,4 +1,4 @@
-# Revisão de segurança da Plataforma de Processo Seletivo
+# Revisão de segurança do Trilha
 
 **19 de novembro de 2026.** Escopo: código-fonte, configuração, dependências Maven de execução e testes locais da API com Java 21 e PostgreSQL 16. O ambiente publicado, o provedor de identidade do operador e a infraestrutura de backup ficaram fora da verificação.
 
@@ -19,7 +19,7 @@
 | 14. Currículos | Entrada de binários por multipart. | Conferidos limite de 5 MiB, MIME PDF, assinatura %PDF, nome UUID e acesso autenticado. O download usa Content-Disposition attachment. A assinatura identifica o formato; o conteúdo interno de um PDF ainda pode ser malicioso. Não há antivírus integrado. |
 | 15. Debug | Documentação interativa disponível no desenvolvimento. | Perfil prod desativa Swagger, OpenAPI, debug, trace, log de parâmetros SQL e detalhes de exceções na resposta. |
 | 16. Dependências | A primeira consulta após atualizar o parent ainda encontrou avisos em sete coordenadas. | Atualizados Boot, Tomcat, Jackson, PostgreSQL JDBC, Log4j, Commons Lang, springdoc e JJWT. Consulta final ao OSV cobriu 86 coordenadas de runtime e encontrou dois avisos em Spring Web MVC. Dependabot configurado para atualizações semanais quando o projeto estiver hospedado no GitHub. As imagens de contêiner e as ferramentas de build não entram nessa contagem. |
-| 17–19. Arquivos e chaves | A pasta do projeto não pertence a um repositório Git. | Inspeção local por nomes de arquivos sensíveis e assinaturas comuns de chaves privadas, AWS, GitHub e API não apontou credencial comprometida nos fontes. Ampliadas exclusões para certificados, chaves, logs e variantes de .env. Testados pedidos anônimos a /.env e /.git/config. Sem histórico Git disponível para varrer. Nenhuma chave externa foi revogada ou substituída. |
+| 17–19. Arquivos e chaves | A cópia examinada em 19 de novembro estava sem a pasta `.git`. | Inspeção local por nomes de arquivos sensíveis e assinaturas comuns de chaves privadas, AWS, GitHub e API não apontou credencial comprometida nos fontes. Ampliadas exclusões para certificados, chaves, logs e variantes de .env. Testados pedidos anônimos a /.env e /.git/config. Sem histórico Git disponível para varrer. Nenhuma chave externa foi revogada ou substituída. |
 | 20–21. Verificação | Cobertura anterior focada no fluxo funcional. | Acrescentados testes de autorização administrativa, origem, cabeçalhos, sessão, limites de frequência, compatibilidade de hashes e validações do perfil prod. Os testes do perfil usam JDBC simulado; o fluxo de candidatura usa PostgreSQL real. |
 
 ## Dois avisos abertos
@@ -70,7 +70,7 @@ As exceções de versão e aviso ficam em [scripts/excecoes-auditoria.json](../s
 
 - O painel do recrutador confere a empresa da vaga e a área do candidato busca apenas registros do usuário autenticado. Os testes verificam essas restrições e o fluxo entre dois navegadores com sessões independentes.
 - A publicação na Vercel usa dados fictícios em memória. A política de conteúdo restringe recursos à própria origem. As credenciais da aplicação integrada ficam na memória da aba. Nenhuma credencial do banco ou do bucket integra a configuração pública do Vite.
-- No histórico Git disponível até o commit `8d5c6c0`, a busca por assinaturas de chaves privadas e tokens de AWS, GitHub, OpenAI e Vercel examinou 208 blobs de texto e retornou zero ocorrências. O resultado cobre os formatos pesquisados.
+- No histórico Git disponível até o [commit `8d5c6c0`](https://github.com/kaua-chavesvk/processo-seletivo/commit/8d5c6c0eb4178755648a85f14a3ef0a68432506b), a busca por assinaturas de chaves privadas e tokens de AWS, GitHub, OpenAI e Vercel examinou 208 blobs de texto e retornou zero ocorrências. O resultado cobre os formatos pesquisados.
 - A integração S3 usa o cliente HTTP da JDK. A primeira resolução do SDK também incluía o transporte Apache opcional. O OSV identificou três avisos nas dependências desse transporte, que foi excluído do runtime. As exceções já documentadas de Spring MVC continuam com a mesma expiração.
 
 ## Verificação da instalação publicada em 23 de novembro

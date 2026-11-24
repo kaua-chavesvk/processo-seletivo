@@ -1,34 +1,31 @@
-# Trilha · Recruitment platform
+# Trilha
 
-[![Platform checks](https://github.com/kaua-chavesvk/processo-seletivo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/kaua-chavesvk/processo-seletivo/actions/workflows/ci.yml) · [Português](README.md)
+How does a candidate find out what happened after sending a résumé? In Trilha, a recruiter moves an application on the job board. The candidate then sees the new stage and the recruiter’s note in their timeline. Both changes commit in a single database transaction.
 
-Trilha follows a job application from the first PDF submission through the hiring decision. Recruiters work on a board for each opening. Candidates see the stage history of their own applications. Moving a card to **Entrevista** updates both views of the same record.
+**[Try the demo without an account](https://trilha-processo-seletivo.vercel.app)** · [Live app with login](https://trilha-selecao-app.vercel.app) · [Português](README.md)
 
-**[Try the board without signing up](https://trilha-processo-seletivo.vercel.app)** · **[Open the live application](https://trilha-selecao-app.vercel.app)** · [Watch the walkthrough](docs/demonstracao.webm)
+![A recruiter moves Marina from screening to interview. Marina opens her timeline and reads the interview note.](docs/demonstracao.gif)
 
-![The Trilha recruiter board with four active hiring stages](docs/funil.png)
+## My decisions
 
-## Try it in a minute
+| What I chose | Benefit and cost |
+| --- | --- |
+| Lock the application row during a stage change. | When two recruiters act at once, the second waits and the API checks their request against the updated stage. The wait is local to that application. |
+| Keep tokens in tab memory. | Credentials stay out of persistent browser storage. Reloading requires a new login, and concurrent requests must coordinate token renewal. |
+| Run the demo on fictional data in memory. | A reviewer can try both roles without uploading a résumé. The demo shares the live app’s screens and resets on reload. |
 
-1. Open **Marina Costa** in **Triagem**, select **Entrevista**, add an optional message for the candidate and click **Salvar etapa**. On a phone, the funnel opens as a list with a stage filter. Desktop opens in board view.
-2. Click **Ver como Marina acompanha essa mudança** to see the interview and your message in Marina’s own timeline.
-3. In the same tab, reopen the [Product Designer vacancy](https://trilha-processo-seletivo.vercel.app/#vagas/produto). It recognizes Marina’s application and shows **Acompanhar candidatura**, a link to her timeline. Use the [data analyst vacancy](https://trilha-processo-seletivo.vercel.app/#vagas/dados) to try a new application.
+Reviewing the funnel taught me that a test can cover every combination and still reproduce a mistake in the implementation. I wrote down the expected transitions independently. With more time, I would watch recruiters use the mobile board to find out whether the stage filter makes screening faster. [Stage rules](src/main/java/br/dev/selecao/candidatura/Funil.java) · [Domain test](src/test/java/br/dev/selecao/DominioTest.java)
 
-In [Minhas vagas](https://trilha-processo-seletivo.vercel.app/#minhas-vagas), try the recruiter’s workflow. Create a draft, edit it, preview the listing and publish it. The opening then appears in **Vagas abertas**. Closing it stops new applications. Candidates can still follow their existing applications under **Minhas candidaturas**.
+## Run locally
 
-The demo is in Portuguese, uses fictional records in browser memory and resets on reload. The live application uses authentication, persistent database records and private file storage. Its openings page reflects what recruiters have published.
+From the repository root, with Docker Compose installed, run the following command.
 
-## Engineering decisions
+```sh
+docker compose up --build -d
+```
 
-The live application and the demo have separate Vercel projects. Both track this repository’s `main` branch for production deployments.
+Open the [local interface](http://localhost:8080). The database starts empty. The operations guide explains how to create a recruiter and publish the first vacancy. [Operations guide in Portuguese](docs/operacao.md)
 
-- **Concurrent reviews.** The recruitment service checks company membership, locks the application row and validates the transition using a plain Java state machine. Stage and history changes commit together. [State machine](src/main/java/br/dev/selecao/candidatura/Funil.java) · [Application service](src/main/java/br/dev/selecao/candidatura/CandidaturasService.java)
-- **Sessions and authorization.** The React client keeps both tokens in tab memory and requires a new login on reload. Spring authorizes each request. Candidates read their own history, recruiters work within their company and administrators onboard companies and recruiters.
-- **Private résumés.** In the live deployment, Spring validates PDFs up to 4 MiB, stores them in a private Vercel Blob store and authorizes downloads. Docker uses a local volume by default. An S3-compatible adapter is also available. [Candidate history from a production smoke test](docs/historico.png)
-- **Deployment.** A Vercel container serves the built React and TypeScript frontend and the Java 21 Spring Boot API on one origin. Neon hosts PostgreSQL. Flyway applies migrations with a separate database identity. [Operations guide in Portuguese](docs/operacao.md)
+## Authorship and tools
 
-## Run and verify
-
-Start `docker compose up --build -d` and open the [local application](http://localhost:8080). Run `python scripts/demonstrar.py` for an isolated end-to-end HTTP workflow. A new database starts with an empty job board.
-
-CI exercises the state machine, tenant isolation and authentication with JUnit and PostgreSQL via Testcontainers. Playwright covers the board, the mobile candidate experience and a candidate-to-recruiter handoff across two browser sessions. The security report records the limits of the hardening work and two tracked Spring MVC advisories. [CI runs](https://github.com/kaua-chavesvk/processo-seletivo/actions/workflows/ci.yml) · [Browser workflow](frontend/tests/integrado.spec.ts) · [Security report](docs/SEGURANCA.md)
+Git credits **kaua-chavesvk** with the project changes from the Spring Boot API through the React interface. The wrapper comes from Apache Maven, and MapStruct generates the mapper implementations. For this revision, Codex wrote refactorings, tests and documentation and captured the GIF from the demo. Earlier commits record the changes without a per-file account of assistant use. [Commit history](https://github.com/kaua-chavesvk/processo-seletivo/commits/main/) · [CI runs](https://github.com/kaua-chavesvk/processo-seletivo/actions/workflows/ci.yml) · [Security report in Portuguese](docs/SEGURANCA.md)
