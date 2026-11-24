@@ -1,5 +1,5 @@
 {
-  "name": "trilha-selecao",
+  "name": "trilha",
   "version": "1.0.0",
   "scripts": {
     "test:unit": "node --test unit/*.test.mjs",

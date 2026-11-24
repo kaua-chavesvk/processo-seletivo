@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/root/.m2 MAVEN_OPTS=-Xmx256m sh mvnw -B -Dmaven.t
 FROM eclipse-temurin:21-jre@sha256:ca73b4d3961703d6d7830a4361f49ef0478f8f28b39defc07bb72f4cc7f834f6
 WORKDIR /app
 RUN mkdir uploads && chown 10001:10001 uploads
-COPY --from=build /src/target/selecao-1.0.0.jar app.jar
+COPY --from=build /src/target/trilha-1.0.0.jar app.jar
 USER 10001:10001
 EXPOSE 8080 8443
 ENTRYPOINT ["java","-XX:MaxRAMPercentage=75","-XX:+ExitOnOutOfMemoryError","-jar","app.jar"]
