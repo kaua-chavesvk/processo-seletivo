@@ -6,14 +6,14 @@ COPY frontend/index.html frontend/tsconfig.json frontend/vite.config.ts ./
 COPY frontend/src src
 RUN npm run build
 
-FROM eclipse-temurin:21-jdk@sha256:db5cc6341a1d7bc40cdb51e1f0d9824f3bb2cc8107d29da421dc4df7d11f05f1 AS build
+FROM eclipse-temurin:25-jdk@sha256:ce2ef9d2d67a68de5e196d4de9d743327c44a10b57fe02ec39f572c652cacfd3 AS build
 WORKDIR /src
 COPY pom.xml mvnw ./
 COPY .mvn .mvn
 COPY src/main src/main
 COPY --from=interface /web/dist src/main/resources/static
 RUN --mount=type=cache,target=/root/.m2 MAVEN_OPTS=-Xmx256m sh mvnw -B -Dmaven.test.skip=true package
-FROM eclipse-temurin:21-jre@sha256:ca73b4d3961703d6d7830a4361f49ef0478f8f28b39defc07bb72f4cc7f834f6
+FROM eclipse-temurin:25-jre@sha256:4ed132f6832e9804b123e89a849a7b4502756ae64a4ee08ebab939d9d5d0a9fa
 WORKDIR /app
 RUN mkdir uploads && chown 10001:10001 uploads
 COPY --from=build /src/target/trilha-1.0.0.jar app.jar
