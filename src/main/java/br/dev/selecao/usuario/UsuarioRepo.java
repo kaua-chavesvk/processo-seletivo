@@ -16,4 +16,10 @@ public interface UsuarioRepo extends JpaRepository<Usuario, UUID> {
       value = "select empresa_id from recrutador_empresa where usuario_id=:id",
       nativeQuery = true)
   Optional<UUID> empresaDoRecrutador(UUID id);
+
+  @org.springframework.data.jpa.repository.Modifying
+  @org.springframework.data.jpa.repository.Query(
+      value = "insert into recrutador_empresa(usuario_id,empresa_id) values (:usuario,:empresa)",
+      nativeQuery = true)
+  void vincularEmpresa(UUID usuario, UUID empresa);
 }

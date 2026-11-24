@@ -26,13 +26,20 @@ public class AuthApi {
 
   private final Banco banco;
   private final Tokens tokens;
+  private final RefreshRepo renovacoes;
   private final UsuarioRepo usuarios;
   private final PasswordEncoder encoder;
   private final String hashFicticio;
   private final SecureRandom random = new SecureRandom();
 
-  public AuthApi(Banco banco, Tokens tokens, UsuarioRepo usuarios, PasswordEncoder encoder) {
+  public AuthApi(
+      Banco banco,
+      Tokens tokens,
+      UsuarioRepo usuarios,
+      PasswordEncoder encoder,
+      RefreshRepo renovacoes) {
     this.banco = banco;
+    this.renovacoes = renovacoes;
     this.tokens = tokens;
     this.usuarios = usuarios;
     this.encoder = encoder;
@@ -65,25 +72,9 @@ public class AuthApi {
 
   private UUID consumir(String token) {
     String hash = hash(token);
-    var id =
-        banco
-            .em
-            .createQuery("select r.usuarioId from Refresh r where r.hashToken=:h", UUID.class)
-            .setParameter("h", hash)
-            .getResultStream()
-            .findFirst()
-            .orElseThrow(Falha::credencial);
+    var id = renovacoes.titular(hash).orElseThrow(Falha::credencial);
     if (!banco.bloquear(Usuario.class, id).isAtivo()) throw Falha.credencial();
-    int usados =
-        banco
-            .em
-            .createQuery(
-                "update Refresh set revogado=true where hashToken=:h and revogado=false and"
-                    + " expiraEm>:agora")
-            .setParameter("h", hash)
-            .setParameter("agora", Instant.now())
-            .executeUpdate();
-    if (usados != 1) throw Falha.credencial();
+    if (renovacoes.consumir(hash, Instant.now()) != 1) throw Falha.credencial();
     return id;
   }
 

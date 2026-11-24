@@ -9,10 +9,10 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class Ator {
-  private final Banco banco;
+  private final UsuarioRepo usuarios;
 
-  public Ator(Banco banco) {
-    this.banco = banco;
+  public Ator(UsuarioRepo usuarios) {
+    this.usuarios = usuarios;
   }
 
   public Usuario opcional() {
@@ -29,12 +29,7 @@ public class Ator {
 
   public void empresa(UUID id) {
     var recrutador = exigir(RECRUTADOR);
-    if (banco
-        .em
-        .createNativeQuery("select 1 from recrutador_empresa where usuario_id=:u and empresa_id=:e")
-        .setParameter("u", recrutador.getId())
-        .setParameter("e", id)
-        .getResultList()
-        .isEmpty()) throw Falha.negado();
+    if (usuarios.empresaDoRecrutador(recrutador.getId()).filter(id::equals).isEmpty())
+      throw Falha.negado();
   }
 }

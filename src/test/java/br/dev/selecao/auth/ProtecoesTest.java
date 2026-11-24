@@ -85,7 +85,7 @@ class ProtecoesTest {
     var usuarios = mock(UsuarioRepo.class);
     var tokens = mock(Tokens.class);
     when(encoder.encode(anyString())).thenReturn("hash-ficticio");
-    var auth = new AuthApi(mock(Banco.class), tokens, usuarios, encoder);
+    var auth = new AuthApi(mock(Banco.class), tokens, usuarios, encoder, mock(RefreshRepo.class));
     var dados = new AuthApi.Login("demo@example.invalid", "senha-de-teste");
 
     when(usuarios.bloquearPorEmail(dados.email())).thenReturn(Optional.empty());

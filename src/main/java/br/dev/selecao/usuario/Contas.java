@@ -1,5 +1,6 @@
 package br.dev.selecao.usuario;
 
+import br.dev.selecao.auth.RefreshRepo;
 import br.dev.selecao.comum.*;
 import br.dev.selecao.empresa.Empresa;
 import java.time.Instant;
@@ -14,10 +15,13 @@ public class Contas {
   public static final int MAX_SENHA = 72;
   private final Banco banco;
   private final UsuarioRepo usuarios;
+  private final RefreshRepo renovacoes;
   private final PasswordEncoder encoder;
 
-  public Contas(Banco banco, UsuarioRepo usuarios, PasswordEncoder encoder) {
+  public Contas(
+      Banco banco, UsuarioRepo usuarios, PasswordEncoder encoder, RefreshRepo renovacoes) {
     this.banco = banco;
+    this.renovacoes = renovacoes;
     this.usuarios = usuarios;
     this.encoder = encoder;
   }
@@ -38,23 +42,12 @@ public class Contas {
     u.papel = papel;
     u.criadoEm = Instant.now();
     banco.inserir(u);
-    if (empresa != null)
-      banco
-          .em
-          .createNativeQuery("insert into recrutador_empresa(usuario_id,empresa_id) values (:u,:e)")
-          .setParameter("u", u.getId())
-          .setParameter("e", empresa)
-          .executeUpdate();
+    if (empresa != null) usuarios.vincularEmpresa(u.getId(), empresa);
     return u;
   }
 
   public void atividade(UUID id, boolean ativo) {
     banco.bloquear(Usuario.class, id).ativo = ativo;
-    if (!ativo)
-      banco
-          .em
-          .createQuery("update Refresh set revogado=true where usuarioId=:id")
-          .setParameter("id", id)
-          .executeUpdate();
+    if (!ativo) renovacoes.revogarDoUsuario(id);
   }
 }
